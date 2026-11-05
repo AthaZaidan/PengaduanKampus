@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "824473889453",
+    "project_id": "lapor-in-bf904",
+    "storage_bucket": "lapor-in-bf904.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:824473889453:android:eacd9d1c095556f96db424",
+        "android_client_info": {
+          "package_name": "com.example.pengaduan_kampus"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "824473889453-chnbmqmdp2nk33cu3bh7rfvsktkq3qkv.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.pengaduan_kampus",
+            "certificate_hash": "25272709530c4849e24ef03234624759058f73da"
+          }
+        },
+        {
+          "client_id": "824473889453-gbvstgq3fat04u31a9ira9girl48830a.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCNA0dJQkUTxdJCgdCu6URDFUpIHZntp7k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "824473889453-gbvstgq3fat04u31a9ira9girl48830a.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "824473889453-g0je0oqvpilcj5romffo4fnv4obrbqbt.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.pengaduanKampus"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

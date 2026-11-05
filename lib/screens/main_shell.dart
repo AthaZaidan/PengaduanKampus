@@ -3,6 +3,7 @@ import '../providers/laporan_provider.dart';
 import 'home_page.dart';
 import 'riwayat_page.dart';
 import 'buat_laporan_page.dart';
+import 'profile_page.dart';
 
 class MainShell extends StatefulWidget {
   final LaporanProvider provider;
@@ -20,9 +21,11 @@ class _MainShellState extends State<MainShell> {
   @override
   void initState() {
     super.initState();
+    // Pastikan _pages berisi 3 Widget sesuai dengan 3 item di NavigationBar
     _pages = [
       HomePage(provider: widget.provider, onBuatLaporan: _goToLaporan),
       RiwayatPage(provider: widget.provider),
+      const ProfilePage(), // Indeks 2: Halaman Profil
     ];
   }
 
@@ -42,6 +45,7 @@ class _MainShellState extends State<MainShell> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
+      // Dipastikan safe check indeks tidak melebih kapasitas list
       body: _pages[_currentIndex],
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
@@ -67,6 +71,11 @@ class _MainShellState extends State<MainShell> {
               selectedIcon: Icon(Icons.list_alt_rounded),
               label: 'Laporan',
             ),
+            NavigationDestination(
+              icon: Icon(Icons.person_outline_rounded),
+              selectedIcon: Icon(Icons.person_rounded),
+              label: 'Profil',
+            ),
           ],
         ),
       ),
@@ -81,7 +90,6 @@ class _MainShellState extends State<MainShell> {
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );
   }
 }

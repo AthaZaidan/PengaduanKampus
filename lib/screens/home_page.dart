@@ -3,6 +3,7 @@ import '../models/laporan.dart';
 import '../providers/laporan_provider.dart';
 import 'detail_laporan_page.dart';
 import 'buat_laporan_page.dart';
+import 'authentication/login_page.dart';
 
 class HomePage extends StatelessWidget {
   final LaporanProvider provider;
@@ -13,6 +14,7 @@ class HomePage extends StatelessWidget {
     required this.provider,
     required this.onBuatLaporan,
   });
+  
 
   @override
   Widget build(BuildContext context) {
