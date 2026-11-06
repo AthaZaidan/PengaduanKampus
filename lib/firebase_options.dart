@@ -44,40 +44,38 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyCqT5mjbbBsFtVP9yfa4B-_73QC84jtZTI',
-    appId: '1:824473889453:web:b4ef167a7edd55906db424',
-    messagingSenderId: '824473889453',
-    projectId: 'lapor-in-bf904',
-    authDomain: 'lapor-in-bf904.firebaseapp.com',
-    storageBucket: 'lapor-in-bf904.firebasestorage.app',
-    measurementId: 'G-B0SLF96W15',
+    apiKey: 'AIzaSyB-DRZEBvqEZYnHQHyTWDoxqszWFfTWZYo',
+    appId: '1:883905507540:web:31403689a707cbd5454b41',
+    messagingSenderId: '883905507540',
+    projectId: 'lapor-in-372dc',
+    authDomain: 'lapor-in-372dc.firebaseapp.com',
+    storageBucket: 'lapor-in-372dc.firebasestorage.app',
+    measurementId: 'G-36LZNPH9WF',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyCNA0dJQkUTxdJCgdCu6URDFUpIHZntp7k',
-    appId: '1:824473889453:android:eacd9d1c095556f96db424',
-    messagingSenderId: '824473889453',
-    projectId: 'lapor-in-bf904',
-    storageBucket: 'lapor-in-bf904.firebasestorage.app',
+    apiKey: 'AIzaSyCuPHoB6fgjdnvXzmwzqj1cExuW4BZ30hc',
+    appId: '1:883905507540:android:33d4a32a4f0c81bc454b41',
+    messagingSenderId: '883905507540',
+    projectId: 'lapor-in-372dc',
+    storageBucket: 'lapor-in-372dc.firebasestorage.app',
   );
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyDi0XlO035eU4WtxS-JQKuFPG1giKLQUEs',
-    appId: '1:824473889453:ios:c4d05f04393edd5f6db424',
-    messagingSenderId: '824473889453',
-    projectId: 'lapor-in-bf904',
-    storageBucket: 'lapor-in-bf904.firebasestorage.app',
-    androidClientId: '824473889453-chnbmqmdp2nk33cu3bh7rfvsktkq3qkv.apps.googleusercontent.com',
-    iosClientId: '824473889453-g0je0oqvpilcj5romffo4fnv4obrbqbt.apps.googleusercontent.com',
+    apiKey: 'AIzaSyCP8Y63fOHfjxsZLS2voS57-8ongYMSKRk',
+    appId: '1:883905507540:ios:1024f6b1727abd0f454b41',
+    messagingSenderId: '883905507540',
+    projectId: 'lapor-in-372dc',
+    storageBucket: 'lapor-in-372dc.firebasestorage.app',
+    iosClientId: '883905507540-b6f5h0b2o6e2bqjid3p5imij4g03k1sj.apps.googleusercontent.com',
     iosBundleId: 'com.example.pengaduanKampus',
   );
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyDi0XlO035eU4WtxS-JQKuFPG1giKLQUEs',
-    appId: '1:824473889453:ios:c4d05f04393edd5f6db424',
-    messagingSenderId: '824473889453',
-    projectId: 'lapor-in-bf904',
-    storageBucket: 'lapor-in-bf904.firebasestorage.app',
-    androidClientId: '824473889453-chnbmqmdp2nk33cu3bh7rfvsktkq3qkv.apps.googleusercontent.com',
-    iosClientId: '824473889453-g0je0oqvpilcj5romffo4fnv4obrbqbt.apps.googleusercontent.com',
+    apiKey: 'AIzaSyCP8Y63fOHfjxsZLS2voS57-8ongYMSKRk',
+    appId: '1:883905507540:ios:1024f6b1727abd0f454b41',
+    messagingSenderId: '883905507540',
+    projectId: 'lapor-in-372dc',
+    storageBucket: 'lapor-in-372dc.firebasestorage.app',
+    iosClientId: '883905507540-b6f5h0b2o6e2bqjid3p5imij4g03k1sj.apps.googleusercontent.com',
     iosBundleId: 'com.example.pengaduanKampus',
   );
 }
