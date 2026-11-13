@@ -16,6 +16,14 @@ class HomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Rebuild otomatis setiap provider memanggil notifyListeners().
+    return ListenableBuilder(
+      listenable: provider,
+      builder: (context, _) => _buildContent(context),
+    );
+  }
+
+  Widget _buildContent(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final laporanList = provider.laporanList;
     final menunggu = provider.laporanMenunggu.length;

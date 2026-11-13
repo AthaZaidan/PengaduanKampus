@@ -1,6 +1,23 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 
 enum StatusLaporan { menunggu, diproses, selesai, ditolak }
+
+/// Satu entri pada timeline perubahan status sebuah laporan.
+class RiwayatStatus {
+  final StatusLaporan status;
+  final DateTime waktu;
+  final String oleh;
+  final String? catatan;
+
+  const RiwayatStatus({
+    required this.status,
+    required this.waktu,
+    required this.oleh,
+    this.catatan,
+  });
+}
 
 class Laporan {
   final String id;
@@ -14,6 +31,12 @@ class Laporan {
   StatusLaporan status;
   String? catatanAdmin;
 
+  /// Foto lampiran (bytes, supaya jalan di mobile maupun web).
+  final List<Uint8List> foto;
+
+  /// Timeline perubahan status, urut dari yang paling lama ke terbaru.
+  final List<RiwayatStatus> riwayat;
+
   Laporan({
     required this.id,
     required this.judul,
@@ -25,7 +48,18 @@ class Laporan {
     required this.tanggalLapor,
     this.status = StatusLaporan.menunggu,
     this.catatanAdmin,
-  });
+    List<Uint8List>? foto,
+    List<RiwayatStatus>? riwayat,
+  })  : foto = foto ?? const [],
+        riwayat = riwayat ??
+            [
+              RiwayatStatus(
+                status: status,
+                waktu: tanggalLapor,
+                oleh: pelapor,
+                catatan: 'Laporan dibuat',
+              ),
+            ];
 }
 
 enum KategoriKerusakan {

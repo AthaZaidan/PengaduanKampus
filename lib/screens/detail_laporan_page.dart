@@ -1,6 +1,9 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import '../models/laporan.dart';
 import '../providers/laporan_provider.dart';
+import '../widgets/foto_viewer.dart';
 
 class DetailLaporanPage extends StatefulWidget {
   final Laporan laporan;
@@ -17,18 +20,10 @@ class DetailLaporanPage extends StatefulWidget {
 }
 
 class _DetailLaporanPageState extends State<DetailLaporanPage> {
-  late Laporan _laporan;
-
-  @override
-  void initState() {
-    super.initState();
-    _laporan = widget.laporan;
-  }
+  Laporan get _laporan => widget.laporan;
 
   void _updateStatus(StatusLaporan newStatus) async {
-    final TextEditingController catatanController = TextEditingController(
-      text: _laporan.catatanAdmin ?? '',
-    );
+    final TextEditingController catatanController = TextEditingController();
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -80,16 +75,8 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
       widget.provider.updateStatus(
         _laporan.id,
         newStatus,
-        catatan: catatanController.text.trim().isNotEmpty
-            ? catatanController.text.trim()
-            : null,
+        catatan: catatanController.text,
       );
-      setState(() {
-        _laporan.status = newStatus;
-        if (catatanController.text.trim().isNotEmpty) {
-          _laporan.catatanAdmin = catatanController.text.trim();
-        }
-      });
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -110,6 +97,14 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Rebuild otomatis setiap provider memanggil notifyListeners().
+    return ListenableBuilder(
+      listenable: widget.provider,
+      builder: (context, _) => _buildContent(context),
+    );
+  }
+
+  Widget _buildContent(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -265,6 +260,22 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
               ),
             ),
 
+            // Foto Lampiran
+            if (_laporan.foto.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              _FotoCard(
+                foto: _laporan.foto,
+                onTap: (i) => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => FotoViewerPage(
+                      foto: _laporan.foto,
+                      initialIndex: i,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+
             // Catatan Admin
             if (_laporan.catatanAdmin != null &&
                 _laporan.catatanAdmin!.isNotEmpty) ...[
@@ -307,6 +318,14 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
                 ),
               ),
             ],
+
+            const SizedBox(height: 12),
+
+            // Timeline Status
+            _StatusTimeline(
+              riwayat: _laporan.riwayat,
+              formatWaktu: _formatTanggalLengkap,
+            ),
 
             const SizedBox(height: 20),
 
@@ -357,6 +376,213 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
       'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
     ];
     return '${date.day} ${bulan[date.month]} ${date.year}, ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+  }
+}
+
+class _FotoCard extends StatelessWidget {
+  final List<Uint8List> foto;
+  final ValueChanged<int> onTap;
+
+  const _FotoCard({required this.foto, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Card(
+      elevation: 1.5,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.photo_library_outlined,
+                    size: 18, color: scheme.primary),
+                const SizedBox(width: 8),
+                Text(
+                  'Foto Lampiran (${foto.length})',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: scheme.primary,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 96,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: foto.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 10),
+                itemBuilder: (context, i) => GestureDetector(
+                  onTap: () => onTap(i),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.memory(
+                      foto[i],
+                      width: 96,
+                      height: 96,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Timeline perubahan status; entri terbaru ada di paling atas.
+class _StatusTimeline extends StatelessWidget {
+  final List<RiwayatStatus> riwayat;
+  final String Function(DateTime) formatWaktu;
+
+  const _StatusTimeline({required this.riwayat, required this.formatWaktu});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final items = riwayat.reversed.toList();
+
+    return Card(
+      elevation: 1.5,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.timeline_rounded, size: 18, color: scheme.primary),
+                const SizedBox(width: 8),
+                Text(
+                  'Riwayat Status',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: scheme.primary,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+            const Divider(height: 20),
+            for (var i = 0; i < items.length; i++)
+              _TimelineItem(
+                item: items[i],
+                isLatest: i == 0,
+                isLast: i == items.length - 1,
+                formatWaktu: formatWaktu,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TimelineItem extends StatelessWidget {
+  final RiwayatStatus item;
+  final bool isLatest;
+  final bool isLast;
+  final String Function(DateTime) formatWaktu;
+
+  const _TimelineItem({
+    required this.item,
+    required this.isLatest,
+    required this.isLast,
+    required this.formatWaktu,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = item.status.color;
+    final catatan = item.catatan;
+
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            width: 32,
+            child: Column(
+              children: [
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: isLatest ? color : color.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: color, width: 1.5),
+                  ),
+                  child: Icon(
+                    item.status.icon,
+                    size: 15,
+                    color: isLatest ? Colors.white : color,
+                  ),
+                ),
+                if (!isLast)
+                  Expanded(
+                    child: Container(width: 2, color: Colors.grey.shade300),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(bottom: isLast ? 0 : 18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.status.label,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: color,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${formatWaktu(item.waktu)} \u2022 ${item.oleh}',
+                    style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                  ),
+                  if (catatan != null && catatan.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        catatan,
+                        style: TextStyle(
+                          fontSize: 12,
+                          height: 1.4,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

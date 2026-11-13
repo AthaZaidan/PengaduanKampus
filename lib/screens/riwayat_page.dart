@@ -43,6 +43,14 @@ class _RiwayatPageState extends State<RiwayatPage>
 
   @override
   Widget build(BuildContext context) {
+    // Rebuild otomatis setiap provider memanggil notifyListeners().
+    return ListenableBuilder(
+      listenable: widget.provider,
+      builder: (context, _) => _buildContent(context),
+    );
+  }
+
+  Widget _buildContent(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -305,6 +313,17 @@ class _RiwayatCard extends StatelessWidget {
                             ),
                           ),
                         ),
+                        if (laporan.foto.isNotEmpty) ...[
+                          const SizedBox(width: 8),
+                          Icon(Icons.photo_camera_outlined,
+                              size: 12, color: Colors.grey.shade500),
+                          const SizedBox(width: 2),
+                          Text(
+                            '${laporan.foto.length}',
+                            style: TextStyle(
+                                fontSize: 11, color: Colors.grey.shade500),
+                          ),
+                        ],
                       ],
                     ),
                   ],

@@ -1,6 +1,10 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../models/laporan.dart';
 import '../providers/laporan_provider.dart';
+import '../widgets/foto_viewer.dart';
 
 class BuatLaporanPage extends StatefulWidget {
   final LaporanProvider provider;
@@ -17,6 +21,11 @@ class _BuatLaporanPageState extends State<BuatLaporanPage> {
   final _deskripsiController = TextEditingController();
   final _lokasiController = TextEditingController();
 
+  static const int _maxFoto = 3;
+
+  final ImagePicker _picker = ImagePicker();
+  final List<Uint8List> _foto = [];
+
   KategoriKerusakan _kategori = KategoriKerusakan.fasilitas;
   PrioritasLaporan _prioritas = PrioritasLaporan.sedang;
   bool _isLoading = false;
@@ -27,6 +36,87 @@ class _BuatLaporanPageState extends State<BuatLaporanPage> {
     _deskripsiController.dispose();
     _lokasiController.dispose();
     super.dispose();
+  }
+
+  void _pilihSumberFoto() {
+    if (_foto.length >= _maxFoto) return;
+
+    showModalBottomSheet<void>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('Ambil dari Kamera'),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _ambilFoto(ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Pilih dari Galeri'),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _ambilFoto(ImageSource.gallery);
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _ambilFoto(ImageSource source) async {
+    try {
+      final picked = await _picker.pickImage(
+        source: source,
+        maxWidth: 1280,
+        imageQuality: 75,
+      );
+      if (picked == null) return;
+
+      final bytes = await picked.readAsBytes();
+      if (!mounted) return;
+      setState(() => _foto.add(bytes));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: const Color(0xFFEF4444),
+          margin: const EdgeInsets.all(16),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          content: const Text(
+            'Gagal mengambil foto. Periksa izin kamera/galeri.',
+            style: TextStyle(color: Colors.white),
+          ),
+        ),
+      );
+    }
+  }
+
+  void _hapusFoto(int index) {
+    setState(() => _foto.removeAt(index));
+  }
+
+  void _lihatFoto(int index) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => FotoViewerPage(
+          foto: List<Uint8List>.of(_foto),
+          initialIndex: index,
+        ),
+      ),
+    );
   }
 
   Future<void> _submit() async {
@@ -44,6 +134,7 @@ class _BuatLaporanPageState extends State<BuatLaporanPage> {
       prioritas: _prioritas,
       pelapor: 'Ahmad Fauzi',
       tanggalLapor: DateTime.now(),
+      foto: List<Uint8List>.of(_foto),
     );
 
     widget.provider.tambahLaporan(laporan);
@@ -196,6 +287,23 @@ class _BuatLaporanPageState extends State<BuatLaporanPage> {
               ),
               const SizedBox(height: 16),
 
+              // Foto Lampiran
+              _buildSectionLabel('Foto Lampiran (opsional)'),
+              const SizedBox(height: 2),
+              Text(
+                'Tambahkan hingga $_maxFoto foto agar kerusakan lebih jelas.',
+                style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+              ),
+              const SizedBox(height: 8),
+              _FotoPicker(
+                foto: _foto,
+                maxFoto: _maxFoto,
+                onTambah: _pilihSumberFoto,
+                onHapus: _hapusFoto,
+                onLihat: _lihatFoto,
+              ),
+              const SizedBox(height: 16),
+
               // Prioritas
               _buildSectionLabel('Tingkat Prioritas *'),
               const SizedBox(height: 6),
@@ -248,6 +356,108 @@ class _BuatLaporanPageState extends State<BuatLaporanPage> {
     return Text(
       label,
       style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+    );
+  }
+}
+
+class _FotoPicker extends StatelessWidget {
+  final List<Uint8List> foto;
+  final int maxFoto;
+  final VoidCallback onTambah;
+  final ValueChanged<int> onHapus;
+  final ValueChanged<int> onLihat;
+
+  const _FotoPicker({
+    required this.foto,
+    required this.maxFoto,
+    required this.onTambah,
+    required this.onHapus,
+    required this.onLihat,
+  });
+
+  static const double _ukuran = 92;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return SizedBox(
+      height: _ukuran,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: [
+          for (var i = 0; i < foto.length; i++)
+            Padding(
+              padding: const EdgeInsets.only(right: 10),
+              child: Stack(
+                children: [
+                  GestureDetector(
+                    onTap: () => onLihat(i),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.memory(
+                        foto[i],
+                        width: _ukuran,
+                        height: _ukuran,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 4,
+                    right: 4,
+                    child: InkWell(
+                      onTap: () => onHapus(i),
+                      customBorder: const CircleBorder(),
+                      child: Container(
+                        padding: const EdgeInsets.all(3),
+                        decoration: const BoxDecoration(
+                          color: Colors.black54,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.close_rounded,
+                          size: 14,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          if (foto.length < maxFoto)
+            InkWell(
+              onTap: onTambah,
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                width: _ukuran,
+                height: _ukuran,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(color: scheme.primary.withValues(alpha: 0.4)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.add_a_photo_outlined,
+                        color: scheme.primary, size: 26),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${foto.length}/$maxFoto',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: scheme.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
