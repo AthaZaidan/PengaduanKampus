@@ -1,12 +1,36 @@
 import 'package:flutter/material.dart';
-import '../models/laporan.dart';
-import '../providers/laporan_provider.dart';
+import '../../models/app_user.dart';
+import '../../models/laporan.dart';
+import '../../providers/laporan_provider.dart';
+import '../../widgets/sla_chip.dart';
 import 'detail_laporan_page.dart';
+
+/// Satu tab pada daftar laporan. [status] null berarti semua status.
+class TabStatus {
+  final String label;
+  final Set<StatusLaporan>? status;
+  final Color? warna;
+
+  const TabStatus(this.label, {this.status, this.warna});
+
+  List<Laporan> saring(List<Laporan> sumber) => status == null
+      ? sumber
+      : sumber.where((l) => status!.contains(l.status)).toList();
+}
 
 class RiwayatPage extends StatefulWidget {
   final LaporanProvider provider;
+  final AppUser user;
+  final String judul;
+  final List<TabStatus> tabs;
 
-  const RiwayatPage({super.key, required this.provider});
+  const RiwayatPage({
+    super.key,
+    required this.provider,
+    required this.user,
+    required this.tabs,
+    this.judul = 'Daftar Laporan',
+  });
 
   @override
   State<RiwayatPage> createState() => _RiwayatPageState();
@@ -21,7 +45,7 @@ class _RiwayatPageState extends State<RiwayatPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: widget.tabs.length, vsync: this);
   }
 
   @override
@@ -52,13 +76,14 @@ class _RiwayatPageState extends State<RiwayatPage>
 
   Widget _buildContent(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final sumber = widget.provider.untuk(widget.user);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF1F5F9),
       appBar: AppBar(
-        title: const Text(
-          'Daftar Laporan',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Text(
+          widget.judul,
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: scheme.primary,
         foregroundColor: Colors.white,
@@ -70,13 +95,8 @@ class _RiwayatPageState extends State<RiwayatPage>
           isScrollable: true,
           tabAlignment: TabAlignment.start,
           tabs: [
-            _buildTab('Semua', widget.provider.laporanList.length),
-            _buildTab('Menunggu', widget.provider.laporanMenunggu.length,
-                StatusLaporan.menunggu.color),
-            _buildTab('Diproses', widget.provider.laporanDiproses.length,
-                StatusLaporan.diproses.color),
-            _buildTab('Selesai', widget.provider.laporanSelesai.length,
-                StatusLaporan.selesai.color),
+            for (final t in widget.tabs)
+              _buildTab(t.label, t.saring(sumber).length, t.warna),
           ],
         ),
       ),
@@ -115,22 +135,12 @@ class _RiwayatPageState extends State<RiwayatPage>
             child: TabBarView(
               controller: _tabController,
               children: [
-                _LaporanList(
-                  list: _filter(widget.provider.laporanList),
-                  provider: widget.provider,
-                ),
-                _LaporanList(
-                  list: _filter(widget.provider.laporanMenunggu),
-                  provider: widget.provider,
-                ),
-                _LaporanList(
-                  list: _filter(widget.provider.laporanDiproses),
-                  provider: widget.provider,
-                ),
-                _LaporanList(
-                  list: _filter(widget.provider.laporanSelesai),
-                  provider: widget.provider,
-                ),
+                for (final t in widget.tabs)
+                  _LaporanList(
+                    list: _filter(t.saring(sumber)),
+                    provider: widget.provider,
+                    user: widget.user,
+                  ),
               ],
             ),
           ),
@@ -171,8 +181,13 @@ class _RiwayatPageState extends State<RiwayatPage>
 class _LaporanList extends StatelessWidget {
   final List<Laporan> list;
   final LaporanProvider provider;
+  final AppUser user;
 
-  const _LaporanList({required this.list, required this.provider});
+  const _LaporanList({
+    required this.list,
+    required this.provider,
+    required this.user,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -200,11 +215,13 @@ class _LaporanList extends StatelessWidget {
         final laporan = list[index];
         return _RiwayatCard(
           laporan: laporan,
+          tampilkanInternal: !user.peran.isPelapor,
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute(
               builder: (_) => DetailLaporanPage(
                 laporan: laporan,
                 provider: provider,
+                user: user,
               ),
             ),
           ),
@@ -218,7 +235,14 @@ class _RiwayatCard extends StatelessWidget {
   final Laporan laporan;
   final VoidCallback onTap;
 
-  const _RiwayatCard({required this.laporan, required this.onTap});
+  /// Admin / teknisi: tampilkan teknisi dan SLA.
+  final bool tampilkanInternal;
+
+  const _RiwayatCard({
+    required this.laporan,
+    required this.onTap,
+    this.tampilkanInternal = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -326,6 +350,32 @@ class _RiwayatCard extends StatelessWidget {
                         ],
                       ],
                     ),
+                    if (tampilkanInternal) ...[
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          if (laporan.teknisiNama != null)
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.engineering_outlined,
+                                    size: 12, color: Colors.grey.shade500),
+                                const SizedBox(width: 3),
+                                Text(
+                                  laporan.teknisiNama!,
+                                  style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.grey.shade600),
+                                ),
+                              ],
+                            ),
+                          SlaChip(laporan: laporan),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),

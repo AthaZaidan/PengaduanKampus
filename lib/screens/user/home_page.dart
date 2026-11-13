@@ -1,19 +1,30 @@
 import 'package:flutter/material.dart';
-import '../models/laporan.dart';
-import '../providers/laporan_provider.dart';
-import 'detail_laporan_page.dart';
+import '../../models/laporan.dart';
+import '../../models/app_user.dart';
+import '../../providers/laporan_provider.dart';
+import '../shared/detail_laporan_page.dart';
 import 'buat_laporan_page.dart';
-import 'authentication/login_page.dart';
+import '../shared/notifikasi_page.dart';
 
 class HomePage extends StatelessWidget {
   final LaporanProvider provider;
+  final AppUser user;
   final VoidCallback onBuatLaporan;
 
   const HomePage({
     super.key,
     required this.provider,
+    required this.user,
     required this.onBuatLaporan,
   });
+
+  static String _inisial(String nama) {
+    final kata =
+        nama.trim().split(RegExp(r'\s+')).where((k) => k.isNotEmpty).toList();
+    if (kata.isEmpty) return '?';
+    if (kata.length == 1) return kata.first[0].toUpperCase();
+    return (kata.first[0] + kata[1][0]).toUpperCase();
+  }
   
 
   @override
@@ -27,10 +38,16 @@ class HomePage extends StatelessWidget {
 
   Widget _buildContent(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final laporanList = provider.laporanList;
-    final menunggu = provider.laporanMenunggu.length;
-    final diproses = provider.laporanDiproses.length;
-    final selesai = provider.laporanSelesai.length;
+    final laporanList = provider.untuk(user);
+    int hitung(Set<StatusLaporan> s) =>
+        laporanList.where((l) => s.contains(l.status)).length;
+    final menunggu = hitung({
+      StatusLaporan.menunggu,
+      StatusLaporan.diverifikasi,
+      StatusLaporan.ditugaskan,
+    });
+    final diproses = hitung({StatusLaporan.diproses});
+    final selesai = hitung({StatusLaporan.selesai});
     final total = laporanList.length;
 
     return Scaffold(
@@ -74,8 +91,8 @@ class HomePage extends StatelessWidget {
                                     fontSize: 13,
                                   ),
                                 ),
-                                const Text(
-                                  'Ahmad Fauzi',
+                                Text(
+                                  user.nama,
                                   style: TextStyle(
                                     color: Colors.white,
                                     fontSize: 20,
@@ -88,8 +105,8 @@ class HomePage extends StatelessWidget {
                               radius: 24,
                               backgroundColor:
                                   Colors.white.withValues(alpha: 0.2),
-                              child: const Text(
-                                'AF',
+                              child: Text(
+                                _inisial(user.nama),
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,
@@ -120,7 +137,12 @@ class HomePage extends StatelessWidget {
             actions: [
               IconButton(
                 icon: const Icon(Icons.notifications_outlined, color: Colors.white),
-                onPressed: () {},
+                tooltip: 'Notifikasi',
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => NotifikasiPage(provider: provider, user: user),
+                  ),
+                ),
               ),
             ],
           ),
@@ -185,7 +207,7 @@ class HomePage extends StatelessWidget {
                           onTap: () => Navigator.of(context).push(
                             MaterialPageRoute(
                               builder: (_) =>
-                                  BuatLaporanPage(provider: provider),
+                                  BuatLaporanPage(provider: provider, user: user),
                             ),
                           ),
                         ),
@@ -263,6 +285,7 @@ class HomePage extends StatelessWidget {
                           builder: (_) => DetailLaporanPage(
                             laporan: laporan,
                             provider: provider,
+                            user: user,
                           ),
                         ),
                       ),

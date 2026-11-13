@@ -159,7 +159,7 @@ class _LoginPageState extends State<LoginPage> {
   void _navigateToMainShell() {
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
-        builder: (context) => MainShell(provider: LaporanProvider()),
+        builder: (context) => MainShell(provider: LaporanProvider.shared),
       ),
     );
   }
@@ -349,4 +349,4 @@ class _LoginPageState extends State<LoginPage> {
       ),
     );
   }
-}
+}

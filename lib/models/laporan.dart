@@ -2,7 +2,16 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
-enum StatusLaporan { menunggu, diproses, selesai, ditolak }
+/// Alur: dilaporkan (menunggu) -> terverifikasi -> ditugaskan -> dikerjakan
+/// (diproses) -> selesai. Laporan yang tidak valid berakhir sebagai ditolak.
+enum StatusLaporan {
+  menunggu,
+  diverifikasi,
+  ditugaskan,
+  diproses,
+  selesai,
+  ditolak,
+}
 
 /// Satu entri pada timeline perubahan status sebuah laporan.
 class RiwayatStatus {
@@ -27,12 +36,22 @@ class Laporan {
   final KategoriKerusakan kategori;
   final PrioritasLaporan prioritas;
   final String pelapor;
+
+  /// uid pelapor (Firebase Auth). Null untuk data contoh.
+  final String? pelaporId;
   final DateTime tanggalLapor;
   StatusLaporan status;
   String? catatanAdmin;
 
-  /// Foto lampiran (bytes, supaya jalan di mobile maupun web).
+  /// Teknisi yang ditugaskan (diisi admin saat status ditugaskan).
+  String? teknisiId;
+  String? teknisiNama;
+
+  /// Foto lampiran pelapor = foto SEBELUM penanganan.
   final List<Uint8List> foto;
+
+  /// Foto SESUDAH penanganan (diunggah teknisi saat menyelesaikan).
+  final List<Uint8List> fotoSesudah;
 
   /// Timeline perubahan status, urut dari yang paling lama ke terbaru.
   final List<RiwayatStatus> riwayat;
@@ -46,11 +65,16 @@ class Laporan {
     required this.prioritas,
     required this.pelapor,
     required this.tanggalLapor,
+    this.pelaporId,
     this.status = StatusLaporan.menunggu,
     this.catatanAdmin,
+    this.teknisiId,
+    this.teknisiNama,
     List<Uint8List>? foto,
+    List<Uint8List>? fotoSesudah,
     List<RiwayatStatus>? riwayat,
   })  : foto = foto ?? const [],
+        fotoSesudah = fotoSesudah ?? <Uint8List>[],
         riwayat = riwayat ??
             [
               RiwayatStatus(
@@ -60,6 +84,29 @@ class Laporan {
                 catatan: 'Laporan dibuat',
               ),
             ];
+
+  /// Batas waktu penyelesaian (SLA) berdasarkan prioritas.
+  DateTime get batasSla => tanggalLapor.add(prioritas.targetSla);
+
+  /// Waktu laporan dinyatakan selesai (null bila belum selesai).
+  DateTime? get waktuSelesai {
+    DateTime? hasil;
+    for (final r in riwayat) {
+      if (r.status == StatusLaporan.selesai) hasil = r.waktu;
+    }
+    return hasil;
+  }
+
+  /// Aktif = belum selesai dan belum ditolak.
+  bool get aktif => status.aktif;
+
+  /// True bila laporan aktif sudah lewat SLA, atau selesai setelah SLA.
+  bool get melewatiSla {
+    if (status == StatusLaporan.ditolak) return false;
+    if (aktif) return DateTime.now().isAfter(batasSla);
+    final selesai = waktuSelesai;
+    return selesai != null && selesai.isAfter(batasSla);
+  }
 }
 
 enum KategoriKerusakan {
@@ -77,9 +124,13 @@ extension StatusLaporanExt on StatusLaporan {
   String get label {
     switch (this) {
       case StatusLaporan.menunggu:
-        return 'Menunggu';
+        return 'Dilaporkan';
+      case StatusLaporan.diverifikasi:
+        return 'Terverifikasi';
+      case StatusLaporan.ditugaskan:
+        return 'Ditugaskan';
       case StatusLaporan.diproses:
-        return 'Diproses';
+        return 'Dikerjakan';
       case StatusLaporan.selesai:
         return 'Selesai';
       case StatusLaporan.ditolak:
@@ -91,6 +142,10 @@ extension StatusLaporanExt on StatusLaporan {
     switch (this) {
       case StatusLaporan.menunggu:
         return const Color(0xFFF59E0B);
+      case StatusLaporan.diverifikasi:
+        return const Color(0xFF8B5CF6);
+      case StatusLaporan.ditugaskan:
+        return const Color(0xFF06B6D4);
       case StatusLaporan.diproses:
         return const Color(0xFF3B82F6);
       case StatusLaporan.selesai:
@@ -104,6 +159,10 @@ extension StatusLaporanExt on StatusLaporan {
     switch (this) {
       case StatusLaporan.menunggu:
         return Icons.hourglass_empty_rounded;
+      case StatusLaporan.diverifikasi:
+        return Icons.verified_rounded;
+      case StatusLaporan.ditugaskan:
+        return Icons.assignment_ind_rounded;
       case StatusLaporan.diproses:
         return Icons.autorenew_rounded;
       case StatusLaporan.selesai:
@@ -112,6 +171,10 @@ extension StatusLaporanExt on StatusLaporan {
         return Icons.cancel_rounded;
     }
   }
+
+  /// Masih dalam proses (belum selesai / ditolak).
+  bool get aktif =>
+      this != StatusLaporan.selesai && this != StatusLaporan.ditolak;
 }
 
 extension KategoriExt on KategoriKerusakan {
@@ -170,6 +233,20 @@ extension PrioritasExt on PrioritasLaporan {
         return const Color(0xFFF59E0B);
       case PrioritasLaporan.tinggi:
         return const Color(0xFFEF4444);
+    }
+  }
+}
+
+/// Target waktu penyelesaian (SLA) per prioritas.
+extension PrioritasSla on PrioritasLaporan {
+  Duration get targetSla {
+    switch (this) {
+      case PrioritasLaporan.tinggi:
+        return const Duration(hours: 24);
+      case PrioritasLaporan.sedang:
+        return const Duration(hours: 72);
+      case PrioritasLaporan.rendah:
+        return const Duration(days: 7);
     }
   }
 }

@@ -1,18 +1,25 @@
 import 'dart:typed_data';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import '../models/laporan.dart';
-import '../providers/laporan_provider.dart';
-import '../widgets/foto_viewer.dart';
+import '../../models/app_user.dart';
+import '../../models/laporan.dart';
+import '../../providers/laporan_provider.dart';
+import '../../widgets/foto_picker_field.dart';
+import '../../widgets/foto_viewer.dart';
 
 class DetailLaporanPage extends StatefulWidget {
   final Laporan laporan;
   final LaporanProvider provider;
 
+  /// Pengguna yang sedang melihat; menentukan tombol aksi yang muncul.
+  final AppUser user;
+
   const DetailLaporanPage({
     super.key,
     required this.laporan,
     required this.provider,
+    required this.user,
   });
 
   @override
@@ -22,35 +29,196 @@ class DetailLaporanPage extends StatefulWidget {
 class _DetailLaporanPageState extends State<DetailLaporanPage> {
   Laporan get _laporan => widget.laporan;
 
-  void _updateStatus(StatusLaporan newStatus) async {
-    final TextEditingController catatanController = TextEditingController();
+  AppUser get _user => widget.user;
 
-    final confirmed = await showDialog<bool>(
+  void _snack(String pesan, Color warna) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: warna,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        content: Text(pesan, style: const TextStyle(color: Colors.white)),
+      ),
+    );
+  }
+
+  /// Dialog catatan. Mengembalikan null bila dibatalkan, '' bila catatan
+  /// opsional dikosongkan.
+  Future<String?> _mintaCatatan({
+    required String judul,
+    required String hint,
+    required String tombol,
+    required Color warna,
+    String? deskripsi,
+    bool wajib = false,
+  }) {
+    final controller = TextEditingController();
+    String? galat;
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialog) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(judul),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (deskripsi != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Text(
+                    deskripsi,
+                    style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                  ),
+                ),
+              TextField(
+                controller: controller,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  hintText: hint,
+                  errorText: galat,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  contentPadding: const EdgeInsets.all(12),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Batal'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final teks = controller.text.trim();
+                if (wajib && teks.isEmpty) {
+                  setDialog(() => galat = 'Wajib diisi');
+                  return;
+                }
+                Navigator.of(ctx).pop(teks);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: warna,
+                foregroundColor: Colors.white,
+              ),
+              child: Text(tombol),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _verifikasi() async {
+    final catatan = await _mintaCatatan(
+      judul: 'Verifikasi Laporan',
+      deskripsi: 'Pastikan laporan valid sebelum ditugaskan ke teknisi.',
+      hint: 'Catatan (opsional)...',
+      tombol: 'Verifikasi',
+      warna: StatusLaporan.diverifikasi.color,
+    );
+    if (catatan == null) return;
+    final ok = widget.provider
+        .verifikasi(_laporan.id, oleh: _user.nama, catatan: catatan);
+    if (ok) _snack('Laporan terverifikasi', StatusLaporan.diverifikasi.color);
+  }
+
+  Future<void> _tolak() async {
+    final alasan = await _mintaCatatan(
+      judul: 'Tolak Laporan',
+      deskripsi: 'Alasan penolakan akan terlihat oleh pelapor.',
+      hint: 'Alasan penolakan...',
+      tombol: 'Tolak',
+      warna: StatusLaporan.ditolak.color,
+      wajib: true,
+    );
+    if (alasan == null) return;
+    final ok =
+        widget.provider.tolak(_laporan.id, oleh: _user.nama, alasan: alasan);
+    if (ok) _snack('Laporan ditolak', StatusLaporan.ditolak.color);
+  }
+
+  Future<void> _tugaskan() async {
+    final hasil = await showDialog<_HasilTugas>(
+      context: context,
+      builder: (_) => _DialogTugaskan(
+        admin: _user,
+        ganti: _laporan.status == StatusLaporan.ditugaskan,
+        teknisiSekarang: _laporan.teknisiId,
+      ),
+    );
+    if (hasil == null) return;
+    final ok = widget.provider.tugaskan(
+      _laporan.id,
+      teknisiId: hasil.id,
+      teknisiNama: hasil.nama,
+      oleh: _user.nama,
+      catatan: hasil.catatan,
+    );
+    if (ok) {
+      _snack('Ditugaskan kepada ${hasil.nama}', StatusLaporan.ditugaskan.color);
+    }
+  }
+
+  Future<void> _mulaiKerja() async {
+    final catatan = await _mintaCatatan(
+      judul: 'Mulai Pengerjaan',
+      deskripsi: 'Status laporan akan berubah menjadi "Dikerjakan".',
+      hint: 'Catatan (opsional)...',
+      tombol: 'Mulai',
+      warna: StatusLaporan.diproses.color,
+    );
+    if (catatan == null) return;
+    final ok = widget.provider
+        .mulaiKerja(_laporan.id, oleh: _user.nama, catatan: catatan);
+    if (ok) _snack('Pengerjaan dimulai', StatusLaporan.diproses.color);
+  }
+
+  Future<void> _selesaikan() async {
+    final controller = TextEditingController();
+    var fotoSesudah = <Uint8List>[];
+
+    final yakin = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Update Status ke "${newStatus.label}"'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Tambahkan catatan (opsional):',
-              style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: catatanController,
-              maxLines: 3,
-              decoration: InputDecoration(
-                hintText: 'Catatan penanganan...',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
+        title: const Text('Tandai Selesai'),
+        // Lebar eksplisit: FotoPickerField berisi ListView horizontal yang
+        // tidak mendukung intrinsic width, sehingga tanpa ini AlertDialog
+        // gagal dirender (layar hanya tampak redup).
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  controller: controller,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    hintText: 'Yang sudah dikerjakan...',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    contentPadding: const EdgeInsets.all(12),
+                  ),
                 ),
-                contentPadding: const EdgeInsets.all(12),
-              ),
+                const SizedBox(height: 14),
+                Text(
+                  'Foto sesudah penanganan (opsional)',
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                ),
+                const SizedBox(height: 8),
+                FotoPickerField(onChanged: (f) => fotoSesudah = f),
+              ],
             ),
-          ],
+          ),
         ),
         actions: [
           TextButton(
@@ -60,39 +228,84 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
           ElevatedButton(
             onPressed: () => Navigator.of(ctx).pop(true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: newStatus.color,
+              backgroundColor: StatusLaporan.selesai.color,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
             ),
-            child: const Text('Konfirmasi'),
+            child: const Text('Selesai'),
           ),
         ],
       ),
     );
+    if (yakin != true) return;
 
-    if (confirmed == true) {
-      widget.provider.updateStatus(
-        _laporan.id,
-        newStatus,
-        catatan: catatanController.text,
-      );
+    final ok = widget.provider.selesaikan(
+      _laporan.id,
+      oleh: _user.nama,
+      catatan: controller.text,
+      fotoSesudah: fotoSesudah,
+    );
+    if (ok) _snack('Pekerjaan ditandai selesai', StatusLaporan.selesai.color);
+  }
 
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: newStatus.color,
-          margin: const EdgeInsets.all(16),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          content: Text(
-            'Status diubah ke "${newStatus.label}"',
-            style: const TextStyle(color: Colors.white),
-          ),
-        ),
+  /// Tombol aksi yang boleh dipakai pengguna ini pada status saat ini.
+  List<Widget> _tombolAksi() {
+    final l = _laporan;
+    final hasil = <Widget>[];
+
+    Widget isi(String label, IconData ikon, Color warna, VoidCallback onTap) {
+      return FilledButton.icon(
+        onPressed: onTap,
+        icon: Icon(ikon, size: 18),
+        label: Text(label),
+        style: FilledButton.styleFrom(backgroundColor: warna),
       );
     }
+
+    Widget garis(String label, IconData ikon, Color warna, VoidCallback onTap) {
+      return OutlinedButton.icon(
+        onPressed: onTap,
+        icon: Icon(ikon, size: 18, color: warna),
+        label: Text(label, style: TextStyle(color: warna)),
+        style: OutlinedButton.styleFrom(side: BorderSide(color: warna)),
+      );
+    }
+
+    if (_user.peran.isAdmin) {
+      switch (l.status) {
+        case StatusLaporan.menunggu:
+          hasil.add(isi('Verifikasi', StatusLaporan.diverifikasi.icon,
+              StatusLaporan.diverifikasi.color, _verifikasi));
+          hasil.add(garis('Tolak', StatusLaporan.ditolak.icon,
+              StatusLaporan.ditolak.color, _tolak));
+        case StatusLaporan.diverifikasi:
+          hasil.add(isi('Tugaskan Teknisi', StatusLaporan.ditugaskan.icon,
+              StatusLaporan.ditugaskan.color, _tugaskan));
+          hasil.add(garis('Tolak', StatusLaporan.ditolak.icon,
+              StatusLaporan.ditolak.color, _tolak));
+        case StatusLaporan.ditugaskan:
+          hasil.add(garis('Ganti Teknisi', Icons.swap_horiz_rounded,
+              StatusLaporan.ditugaskan.color, _tugaskan));
+        case StatusLaporan.diproses:
+        case StatusLaporan.selesai:
+        case StatusLaporan.ditolak:
+          break;
+      }
+    } else if (_user.peran.isTeknisi && l.teknisiId == _user.uid) {
+      switch (l.status) {
+        case StatusLaporan.ditugaskan:
+          hasil.add(isi('Mulai Pengerjaan', StatusLaporan.diproses.icon,
+              StatusLaporan.diproses.color, _mulaiKerja));
+        case StatusLaporan.diproses:
+          hasil.add(isi('Tandai Selesai', StatusLaporan.selesai.icon,
+              StatusLaporan.selesai.color, _selesaikan));
+        case StatusLaporan.menunggu:
+        case StatusLaporan.diverifikasi:
+        case StatusLaporan.selesai:
+        case StatusLaporan.ditolak:
+          break;
+      }
+    }
+    return hasil;
   }
 
   @override
@@ -218,6 +431,18 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
                   label: 'Tanggal Lapor',
                   value: _formatTanggalLengkap(_laporan.tanggalLapor),
                 ),
+                if (_laporan.teknisiNama != null)
+                  _InfoRow(
+                    icon: Icons.engineering_outlined,
+                    label: 'Teknisi',
+                    value: _laporan.teknisiNama!,
+                  ),
+                if (!_user.peran.isPelapor)
+                  _InfoRow(
+                    icon: Icons.timer_outlined,
+                    label: 'Batas SLA (${_laporan.prioritas.label})',
+                    value: _formatTanggalLengkap(_laporan.batasSla),
+                  ),
               ],
             ),
             const SizedBox(height: 12),
@@ -260,19 +485,23 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
               ),
             ),
 
-            // Foto Lampiran
+            // Foto Sebelum (lampiran pelapor)
             if (_laporan.foto.isNotEmpty) ...[
               const SizedBox(height: 12),
               _FotoCard(
+                judul: 'Foto Sebelum',
                 foto: _laporan.foto,
-                onTap: (i) => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => FotoViewerPage(
-                      foto: _laporan.foto,
-                      initialIndex: i,
-                    ),
-                  ),
-                ),
+                onTap: (i) => _bukaFoto(_laporan.foto, i),
+              ),
+            ],
+
+            // Foto Sesudah (dari teknisi)
+            if (_laporan.fotoSesudah.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              _FotoCard(
+                judul: 'Foto Sesudah',
+                foto: _laporan.fotoSesudah,
+                onTap: (i) => _bukaFoto(_laporan.fotoSesudah, i),
               ),
             ],
 
@@ -327,45 +556,25 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
               formatWaktu: _formatTanggalLengkap,
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 12),
 
-            // Update Status Section
-            Text(
-              'Update Status',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-                color: Colors.grey.shade700,
+            // Tindakan sesuai peran
+            if (!_user.peran.isPelapor)
+              _PanelAksi(
+                peran: _user.peran,
+                tombol: _tombolAksi(),
               ),
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: StatusLaporan.values
-                  .where((s) => s != _laporan.status)
-                  .map((s) => OutlinedButton.icon(
-                        onPressed: () => _updateStatus(s),
-                        icon: Icon(s.icon, size: 16, color: s.color),
-                        label: Text(
-                          s.label,
-                          style: TextStyle(
-                              color: s.color, fontWeight: FontWeight.w600),
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          side: BorderSide(color: s.color),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 14, vertical: 8),
-                        ),
-                      ))
-                  .toList(),
-            ),
             const SizedBox(height: 40),
           ],
         ),
+      ),
+    );
+  }
+
+  void _bukaFoto(List<Uint8List> foto, int index) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => FotoViewerPage(foto: foto, initialIndex: index),
       ),
     );
   }
@@ -379,11 +588,211 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
   }
 }
 
+class _PanelAksi extends StatelessWidget {
+  final PeranPengguna peran;
+  final List<Widget> tombol;
+
+  const _PanelAksi({required this.peran, required this.tombol});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Card(
+      elevation: 1.5,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(peran.icon, size: 18, color: scheme.primary),
+                const SizedBox(width: 8),
+                Text(
+                  'Tindakan ${peran.label}',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: scheme.primary,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (tombol.isEmpty)
+              Text(
+                'Tidak ada tindakan yang tersedia untuk laporan ini.',
+                style: TextStyle(fontSize: 12.5, color: Colors.grey.shade600),
+              )
+            else
+              Wrap(spacing: 10, runSpacing: 10, children: tombol),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Teknisi {
+  final String id;
+  final String nama;
+
+  const _Teknisi(this.id, this.nama);
+}
+
+class _HasilTugas {
+  final String id;
+  final String nama;
+  final String? catatan;
+
+  const _HasilTugas(this.id, this.nama, this.catatan);
+}
+
+/// Dialog memilih teknisi (dibaca dari Firestore: users dengan role teknisi).
+class _DialogTugaskan extends StatefulWidget {
+  final AppUser admin;
+  final bool ganti;
+  final String? teknisiSekarang;
+
+  const _DialogTugaskan({
+    required this.admin,
+    required this.ganti,
+    this.teknisiSekarang,
+  });
+
+  @override
+  State<_DialogTugaskan> createState() => _DialogTugaskanState();
+}
+
+class _DialogTugaskanState extends State<_DialogTugaskan> {
+  late final Future<List<_Teknisi>> _future = _muat();
+  final TextEditingController _catatan = TextEditingController();
+  _Teknisi? _terpilih;
+
+  Future<List<_Teknisi>> _muat() async {
+    final hasil = <_Teknisi>[];
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('users')
+          .where('role', isEqualTo: 'teknisi')
+          .get();
+      for (final d in snap.docs) {
+        final data = d.data();
+        final nama = (data['name'] ?? '').toString().trim();
+        final email = (data['email'] ?? '').toString().trim();
+        hasil.add(_Teknisi(d.id, nama.isNotEmpty ? nama : email));
+      }
+    } catch (_) {
+      // Gagal membaca daftar teknisi: tetap tampilkan opsi lain bila ada.
+    }
+    hasil.removeWhere((t) => t.id == widget.teknisiSekarang);
+    return hasil;
+  }
+
+  @override
+  void dispose() {
+    _catatan.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Text(widget.ganti ? 'Ganti Teknisi' : 'Tugaskan Teknisi'),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: FutureBuilder<List<_Teknisi>>(
+          future: _future,
+          builder: (context, snap) {
+            if (snap.connectionState != ConnectionState.done) {
+              return const SizedBox(
+                height: 80,
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+            final daftar = snap.data ?? const <_Teknisi>[];
+            return SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (daftar.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Text(
+                        'Belum ada akun teknisi. Tambahkan lewat tab '
+                        '"Teknisi" di menu admin.',
+                        style: TextStyle(
+                            fontSize: 13, color: Colors.grey.shade600),
+                      ),
+                    ),
+                  for (final t in daftar)
+                    ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      selected: _terpilih?.id == t.id,
+                      selectedColor: scheme.primary,
+                      leading: Icon(_terpilih?.id == t.id
+                          ? Icons.radio_button_checked
+                          : Icons.radio_button_off),
+                      title: Text(t.nama),
+                      onTap: () => setState(() => _terpilih = t),
+                    ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _catatan,
+                    maxLines: 2,
+                    decoration: InputDecoration(
+                      hintText: 'Catatan untuk teknisi (opsional)...',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      contentPadding: const EdgeInsets.all(12),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Batal'),
+        ),
+        ElevatedButton(
+          onPressed: _terpilih == null
+              ? null
+              : () => Navigator.of(context).pop(
+                    _HasilTugas(
+                      _terpilih!.id,
+                      _terpilih!.nama,
+                      _catatan.text.trim().isEmpty ? null : _catatan.text,
+                    ),
+                  ),
+          child: const Text('Tugaskan'),
+        ),
+      ],
+    );
+  }
+}
+
 class _FotoCard extends StatelessWidget {
+  final String judul;
   final List<Uint8List> foto;
   final ValueChanged<int> onTap;
 
-  const _FotoCard({required this.foto, required this.onTap});
+  const _FotoCard({
+    required this.judul,
+    required this.foto,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -403,7 +812,7 @@ class _FotoCard extends StatelessWidget {
                     size: 18, color: scheme.primary),
                 const SizedBox(width: 8),
                 Text(
-                  'Foto Lampiran (${foto.length})',
+                  '$judul (${foto.length})',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: scheme.primary,

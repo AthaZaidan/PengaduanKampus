@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../models/app_user.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -21,6 +22,9 @@ class _RegisterPageState extends State<RegisterPage> {
 
   bool _isPasswordHidden = true;
   bool _isLoading = false;
+
+  // Jenis pengguna (akun admin & teknisi dibuat oleh admin, bukan lewat form ini)
+  PeranPengguna _peran = PeranPengguna.mahasiswa;
 
   @override
   void dispose() {
@@ -64,7 +68,7 @@ class _RegisterPageState extends State<RegisterPage> {
           'nim': nim,
           'email': email,
           'phone': phone,
-          'role': 'student',
+          'role': _peran.kode,
           'createdAt': FieldValue.serverTimestamp(),
         });
       }
@@ -160,26 +164,68 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
                 const SizedBox(height: 16),
 
-                // 2. Input NIM (Validasi Tepat 9 Digit Angka)
+                // Jenis pengguna
+                const Text(
+                  'Daftar sebagai',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: SegmentedButton<PeranPengguna>(
+                    showSelectedIcon: false,
+                    segments: const [
+                      ButtonSegment(
+                        value: PeranPengguna.mahasiswa,
+                        label: Text('Mahasiswa'),
+                      ),
+                      ButtonSegment(
+                        value: PeranPengguna.dosen,
+                        label: Text('Dosen'),
+                      ),
+                      ButtonSegment(
+                        value: PeranPengguna.staf,
+                        label: Text('Staf'),
+                      ),
+                    ],
+                    selected: {_peran},
+                    onSelectionChanged: (v) =>
+                        setState(() => _peran = v.first),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // 2. Input NIM (mahasiswa: tepat 9 digit) / NIP-ID (dosen, staf)
                 TextFormField(
                   controller: _nimController,
                   keyboardType: TextInputType.number,
-                  maxLength: 9,
-                  decoration: const InputDecoration(
-                    labelText: 'NIM (9 Digit)',
-                    hintText: 'Contoh: 241402101',
-                    prefixIcon: Icon(Icons.badge_outlined),
+                  maxLength: _peran == PeranPengguna.mahasiswa ? 9 : 20,
+                  decoration: InputDecoration(
+                    labelText: _peran == PeranPengguna.mahasiswa
+                        ? 'NIM (9 Digit)'
+                        : 'NIP / ID Pegawai',
+                    hintText: _peran == PeranPengguna.mahasiswa
+                        ? 'Contoh: 241402101'
+                        : 'Contoh: 198501012010011001',
+                    prefixIcon: const Icon(Icons.badge_outlined),
                     counterText: "", // Menyembunyikan text counter default
                   ),
                   validator: (v) {
-                    if (v == null || v.trim().isEmpty) {
-                      return 'NIM wajib diisi';
+                    final nilai = v?.trim() ?? '';
+                    final mahasiswa = _peran == PeranPengguna.mahasiswa;
+                    if (nilai.isEmpty) {
+                      return mahasiswa ? 'NIM wajib diisi' : 'NIP / ID wajib diisi';
                     }
-                    if (v.trim().length != 9) {
+                    if (mahasiswa && nilai.length != 9) {
                       return 'NIM harus terdiri dari 9 digit angka';
                     }
-                    if (!RegExp(r'^[0-9]+$').hasMatch(v.trim())) {
-                      return 'NIM hanya boleh berisi angka';
+                    if (!mahasiswa && nilai.length < 5) {
+                      return 'NIP / ID minimal 5 digit';
+                    }
+                    if (!RegExp(r'^[0-9]+$').hasMatch(nilai)) {
+                      return mahasiswa
+                          ? 'NIM hanya boleh berisi angka'
+                          : 'NIP / ID hanya boleh berisi angka';
                     }
                     return null;
                   },
@@ -292,4 +338,4 @@ class _RegisterPageState extends State<RegisterPage> {
       ),
     );
   }
-}
+}

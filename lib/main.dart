@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart'; 
 import 'screens/authentication/login_page.dart';
+import 'theme/tema_aksen.dart';
 
 void main() async {
   
@@ -51,7 +52,25 @@ class PengaduanKampusApp extends StatelessWidget {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         ),
       ),
+      // Warna aksen mengikuti peran; dipasang di atas Navigator supaya halaman
+      // yang di-push dan dialog ikut berwarna sama.
+      builder: (context, child) => ValueListenableBuilder<Color?>(
+        valueListenable: TemaAksen.warna,
+        builder: (context, warna, _) {
+          if (warna == null || child == null) return child ?? const SizedBox();
+          final tema = Theme.of(context);
+          return Theme(
+            data: tema.copyWith(
+              colorScheme: ColorScheme.fromSeed(
+                seedColor: warna,
+                brightness: Brightness.light,
+              ),
+            ),
+            child: child,
+          );
+        },
+      ),
       home: const LoginPage(),
     );
   }
-}
+}
