@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+
 import '../../models/app_user.dart';
 import '../../models/laporan.dart';
 import '../../providers/laporan_provider.dart';
+import '../../theme/app_theme.dart';
 import 'detail_laporan_page.dart';
 
 /// Daftar pemberitahuan perubahan status laporan (diambil dari timeline).
@@ -32,18 +34,18 @@ class NotifikasiPage extends StatelessWidget {
   }
 
   Widget _buildContent(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final daftar = _kumpulkan();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF1F5F9),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text(
           'Notifikasi',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(fontWeight: FontWeight.w700),
         ),
-        backgroundColor: scheme.primary,
+        backgroundColor: AppColors.forestGreen,
         foregroundColor: Colors.white,
+        elevation: 0,
       ),
       body: daftar.isEmpty
           ? Center(
@@ -52,29 +54,53 @@ class NotifikasiPage extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.notifications_none_rounded,
-                        size: 64, color: Colors.grey.shade400),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'Belum ada notifikasi',
-                      style:
-                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    Container(
+                      padding: const EdgeInsets.all(22),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppColors.borderSubtle),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.deepForest.withValues(alpha: 0.04),
+                            blurRadius: 16,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.notifications_none_rounded,
+                        size: 52,
+                        color: AppColors.sageGreen,
+                      ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Perubahan status laporan akan muncul di sini.',
+                    const SizedBox(height: 20),
+                    const Text(
+                      'Belum Ada Notifikasi',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.deepForest,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Perubahan status laporan Anda akan muncul di sini secara berkala.',
                       textAlign: TextAlign.center,
-                      style:
-                          TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 13,
+                        height: 1.4,
+                      ),
                     ),
                   ],
                 ),
               ),
             )
           : ListView.separated(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
               itemCount: daftar.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              separatorBuilder: (_, _) => const SizedBox(height: 10),
               itemBuilder: (context, i) => _NotifTile(
                 notif: daftar[i],
                 onTap: () => Navigator.of(context).push(
@@ -108,7 +134,7 @@ class _NotifTile extends StatelessWidget {
   static String _waktuRelatif(DateTime t) {
     final d = DateTime.now().difference(t);
     if (d.inMinutes < 1) return 'Baru saja';
-    if (d.inMinutes < 60) return '${d.inMinutes} menit lalu';
+    if (d.inMinutes < 60) return '${d.inMinutes} m lalu';
     if (d.inHours < 24) return '${d.inHours} jam lalu';
     if (d.inDays < 7) return '${d.inDays} hari lalu';
     return '${t.day}/${t.month}/${t.year}';
@@ -119,70 +145,139 @@ class _NotifTile extends StatelessWidget {
     final status = notif.entri.status;
     final catatan = notif.entri.catatan;
 
-    return Card(
-      elevation: 1.5,
-      margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              CircleAvatar(
-                radius: 20,
-                backgroundColor: status.color.withValues(alpha: 0.15),
-                child: Icon(status.icon, color: status.color, size: 20),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      notif.laporan.judul,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.borderSubtle),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.deepForest.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: status.backgroundColor,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: status.color.withValues(alpha: 0.2),
+                      width: 1,
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Status berubah menjadi ${status.label}',
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w600,
-                        color: status.color,
+                  ),
+                  child: Icon(status.icon, color: status.color, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              notif.laporan.judul,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: AppColors.deepForest,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            _waktuRelatif(notif.entri.waktu),
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppColors.textMuted,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    if (catatan != null && catatan.isNotEmpty) ...[
                       const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 7,
+                          vertical: 2.5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: status.backgroundColor,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          'Status: ${status.label}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: status.color,
+                          ),
+                        ),
+                      ),
+                      if (catatan != null && catatan.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 7,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.softSage.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            catatan,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              height: 1.35,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 6),
                       Text(
-                        catatan,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 12,
-                          height: 1.3,
-                          color: Colors.grey.shade700,
+                        'ID: ${notif.laporan.id}',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppColors.textMuted,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],
-                    const SizedBox(height: 6),
-                    Text(
-                      '${_waktuRelatif(notif.entri.waktu)} \u2022 ${notif.laporan.id}',
-                      style:
-                          TextStyle(fontSize: 11, color: Colors.grey.shade500),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-              Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400),
-            ],
+                const SizedBox(width: 4),
+                const Padding(
+                  padding: EdgeInsets.only(top: 10),
+                  child: Icon(
+                    Icons.chevron_right_rounded,
+                    color: AppColors.textMuted,
+                    size: 18,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_theme.dart';
+
 /// Peran pengguna. Mahasiswa, dosen, dan staf memakai hak akses yang sama
 /// (pelapor); admin fasilitas dan teknisi punya hak akses sendiri.
 enum PeranPengguna { mahasiswa, dosen, staf, admin, teknisi }
@@ -58,11 +60,11 @@ extension PeranPenggunaExt on PeranPengguna {
   bool get isAdmin => this == PeranPengguna.admin;
   bool get isTeknisi => this == PeranPengguna.teknisi;
 
-  /// Warna aksen tampilan untuk peran ini.
+  /// Warna aksen tampilan untuk peran ini (berdasarkan palet tema utama).
   Color get warna {
-    if (isAdmin) return const Color(0xFF5E35B1);
-    if (isTeknisi) return const Color(0xFF00796B);
-    return const Color(0xFF1565C0);
+    if (isAdmin) return AppColors.deepForest;
+    if (isTeknisi) return AppColors.mutedTeal;
+    return AppColors.forestGreen;
   }
 }
 

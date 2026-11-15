@@ -2,9 +2,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+
 import '../../models/app_user.dart';
 import '../../models/laporan.dart';
 import '../../providers/laporan_provider.dart';
+import '../../theme/app_theme.dart';
 import '../../theme/tema_aksen.dart';
 import '../authentication/login_page.dart';
 
@@ -14,11 +16,7 @@ class ProfilePage extends StatefulWidget {
   /// Pengguna yang sedang login (peran dibaca dari Firestore).
   final AppUser user;
 
-  const ProfilePage({
-    super.key,
-    required this.provider,
-    required this.user,
-  });
+  const ProfilePage({super.key, required this.provider, required this.user});
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -46,18 +44,26 @@ class _ProfilePageState extends State<ProfilePage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         behavior: SnackBarBehavior.floating,
-        backgroundColor:
-            error ? const Color(0xFFEF4444) : const Color(0xFF10B981),
+        backgroundColor: error ? AppColors.error : AppColors.success,
         margin: const EdgeInsets.all(16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        content: Text(pesan, style: const TextStyle(color: Colors.white)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        content: Text(
+          pesan,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ),
     );
   }
 
   static String _inisial(String nama) {
-    final kata =
-        nama.trim().split(RegExp(r'\s+')).where((k) => k.isNotEmpty).toList();
+    final kata = nama
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((k) => k.isNotEmpty)
+        .toList();
     if (kata.isEmpty) return 'M';
     if (kata.length == 1) return kata.first[0].toUpperCase();
     return (kata.first[0] + kata[1][0]).toUpperCase();
@@ -83,8 +89,18 @@ class _ProfilePageState extends State<ProfilePage> {
     final yakin = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Keluar dari akun?'),
-        content: const Text('Anda perlu masuk lagi untuk memakai aplikasi.'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          'Keluar dari akun?',
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            color: AppColors.deepForest,
+          ),
+        ),
+        content: const Text(
+          'Anda perlu masuk lagi untuk memakai aplikasi Pengaduan Kampus.',
+          style: TextStyle(color: AppColors.textSecondary),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -93,7 +109,10 @@ class _ProfilePageState extends State<ProfilePage> {
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: FilledButton.styleFrom(
-              backgroundColor: Colors.red.shade600,
+              backgroundColor: AppColors.error,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
             child: const Text('Keluar'),
           ),
@@ -121,7 +140,14 @@ class _ProfilePageState extends State<ProfilePage> {
     final nama = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Ubah Nama'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          'Ubah Nama',
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            color: AppColors.deepForest,
+          ),
+        ),
         content: TextField(
           controller: controller,
           autofocus: true,
@@ -135,6 +161,12 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.forestGreen,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
             child: const Text('Simpan'),
           ),
         ],
@@ -144,10 +176,9 @@ class _ProfilePageState extends State<ProfilePage> {
 
     try {
       await user.updateDisplayName(nama);
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .set({'name': nama}, SetOptions(merge: true));
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+        'name': nama,
+      }, SetOptions(merge: true));
       await user.reload();
       if (!mounted) return;
       setState(() {});
@@ -159,13 +190,16 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _ubahPassword(User user) async {
-    final pakaiPassword =
-        user.providerData.any((p) => p.providerId == 'password');
+    final pakaiPassword = user.providerData.any(
+      (p) => p.providerId == 'password',
+    );
     final email = user.email;
 
     if (!pakaiPassword) {
-      _snack('Akun ini masuk dengan Google, jadi tidak memiliki password.',
-          error: true);
+      _snack(
+        'Akun ini masuk dengan Google, jadi tidak memiliki password.',
+        error: true,
+      );
       return;
     }
     if (email == null || email.isEmpty) {
@@ -188,16 +222,23 @@ class _ProfilePageState extends State<ProfilePage> {
       context: context,
       applicationName: 'Pengaduan Kampus',
       applicationVersion: '1.0.0',
-      applicationIcon: Icon(
-        Icons.campaign_rounded,
-        size: 40,
-        color: Theme.of(context).colorScheme.primary,
+      applicationIcon: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: AppColors.softSage.withValues(alpha: 0.5),
+          shape: BoxShape.circle,
+        ),
+        child: const Icon(
+          Icons.campaign_rounded,
+          size: 32,
+          color: AppColors.forestGreen,
+        ),
       ),
       children: const [
-        SizedBox(height: 8),
+        SizedBox(height: 10),
         Text(
-          'Aplikasi untuk melaporkan kerusakan fasilitas kampus dan '
-          'memantau penanganannya.',
+          'Aplikasi modern untuk melaporkan kerusakan fasilitas kampus dan memantau alur penanganan teknisi secara transparan.',
+          style: TextStyle(color: AppColors.textSecondary, height: 1.4),
         ),
       ],
     );
@@ -208,16 +249,15 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
-    final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF1F5F9),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text(
           'Profil Saya',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(fontWeight: FontWeight.w700),
         ),
-        backgroundColor: scheme.primary,
+        backgroundColor: AppColors.forestGreen,
         foregroundColor: Colors.white,
       ),
       body: user == null
@@ -228,8 +268,6 @@ class _ProfilePageState extends State<ProfilePage> {
                   .doc(user.uid)
                   .snapshots(),
               builder: (context, snapshot) {
-                // Jika Firestore gagal / dokumen belum ada, tetap tampil
-                // memakai data dari Firebase Auth.
                 final data = snapshot.data?.data() ?? <String, dynamic>{};
                 return _buildBody(context, user, data);
               },
@@ -242,15 +280,14 @@ class _ProfilePageState extends State<ProfilePage> {
     User user,
     Map<String, dynamic> data,
   ) {
-    final scheme = Theme.of(context).colorScheme;
-
     final nama = _ambil(data, 'name') ?? user.displayName ?? 'Mahasiswa';
     final email = _ambil(data, 'email') ?? user.email ?? '-';
     final nim = _ambil(data, 'nim');
     final telepon = _ambil(data, 'phone');
     final peran = widget.user.peran;
-    final lewatGoogle =
-        user.providerData.any((p) => p.providerId == 'google.com');
+    final lewatGoogle = user.providerData.any(
+      (p) => p.providerId == 'google.com',
+    );
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -259,38 +296,51 @@ class _ProfilePageState extends State<ProfilePage> {
         Container(
           padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            gradient: LinearGradient(
+            borderRadius: BorderRadius.circular(20),
+            gradient: const LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                scheme.primary,
-                Color.alphaBlend(
-                    Colors.black.withValues(alpha: 0.3), scheme.primary),
-              ],
+              colors: [AppColors.deepForest, AppColors.forestGreen],
             ),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.deepForest.withValues(alpha: 0.12),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
           child: Column(
             children: [
-              CircleAvatar(
-                radius: 44,
-                backgroundColor: Colors.white,
+              Container(
+                padding: const EdgeInsets.all(3),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: AppColors.softSage.withValues(alpha: 0.6),
+                    width: 2.5,
+                  ),
+                ),
                 child: CircleAvatar(
-                  radius: 41,
-                  backgroundColor: scheme.primary.withValues(alpha: 0.15),
-                  backgroundImage: user.photoURL != null
-                      ? NetworkImage(user.photoURL!)
-                      : null,
-                  child: user.photoURL == null
-                      ? Text(
-                          _inisial(nama),
-                          style: TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            color: scheme.primary,
-                          ),
-                        )
-                      : null,
+                  radius: 40,
+                  backgroundColor: Colors.white,
+                  child: CircleAvatar(
+                    radius: 37,
+                    backgroundColor: AppColors.softSage.withValues(alpha: 0.45),
+                    backgroundImage: user.photoURL != null
+                        ? NetworkImage(user.photoURL!)
+                        : null,
+                    child: user.photoURL == null
+                        ? Text(
+                            _inisial(nama),
+                            style: const TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.forestGreen,
+                            ),
+                          )
+                        : null,
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -300,7 +350,8 @@ class _ProfilePageState extends State<ProfilePage> {
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 20,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.2,
                 ),
               ),
               const SizedBox(height: 2),
@@ -314,11 +365,16 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
               const SizedBox(height: 10),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.25),
+                  ),
                 ),
                 child: Text(
                   peran.label,
@@ -332,7 +388,7 @@ class _ProfilePageState extends State<ProfilePage> {
             ],
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 14),
 
         // ------------------------------------------------ ringkasan laporan
         _Kartu(
@@ -349,7 +405,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   _AngkaRingkas(
                     nilai: daftar.length,
                     label: 'Total',
-                    warna: scheme.primary,
+                    warna: AppColors.forestGreen,
                   ),
                   _AngkaRingkas(
                     nilai: hitung({
@@ -358,24 +414,24 @@ class _ProfilePageState extends State<ProfilePage> {
                       StatusLaporan.ditugaskan,
                     }),
                     label: 'Menunggu',
-                    warna: StatusLaporan.menunggu.color,
+                    warna: AppColors.statusMenunggu,
                   ),
                   _AngkaRingkas(
                     nilai: hitung({StatusLaporan.diproses}),
                     label: 'Dikerjakan',
-                    warna: StatusLaporan.diproses.color,
+                    warna: AppColors.statusDiproses,
                   ),
                   _AngkaRingkas(
                     nilai: hitung({StatusLaporan.selesai}),
                     label: 'Selesai',
-                    warna: StatusLaporan.selesai.color,
+                    warna: AppColors.statusSelesai,
                   ),
                 ],
               );
             },
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 14),
 
         // ------------------------------------------------- informasi akun
         _Kartu(
@@ -385,7 +441,7 @@ class _ProfilePageState extends State<ProfilePage> {
             children: [
               _BarisInfo(
                 ikon: peran.icon,
-                label: 'Peran',
+                label: 'Peran Akun',
                 nilai: peran.label,
               ),
               _BarisInfo(
@@ -396,13 +452,13 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
               _BarisInfo(
                 ikon: Icons.phone_outlined,
-                label: 'No. HP',
+                label: 'No. HP / WhatsApp',
                 nilai: telepon ?? 'Belum diisi',
                 redup: telepon == null,
               ),
               _BarisInfo(
                 ikon: Icons.email_outlined,
-                label: 'Email',
+                label: 'Alamat Email',
                 nilai: email,
               ),
               _BarisInfo(
@@ -419,13 +475,13 @@ class _ProfilePageState extends State<ProfilePage> {
             ],
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 14),
 
         // ------------------------------------------------------ pengaturan
         _Kartu(
-          judul: 'Pengaturan',
+          judul: 'Pengaturan & Keamanan',
           ikon: Icons.settings_outlined,
-          padding: const EdgeInsets.symmetric(vertical: 6),
+          padding: const EdgeInsets.symmetric(vertical: 4),
           child: Column(
             children: [
               _MenuTile(
@@ -449,29 +505,29 @@ class _ProfilePageState extends State<ProfilePage> {
             ],
           ),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 24),
 
         // ---------------------------------------------------------- logout
         SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(
             onPressed: _logout,
-            icon: const Icon(Icons.logout_rounded),
+            icon: const Icon(Icons.logout_rounded, size: 20),
             label: const Text(
               'Keluar dari Akun',
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: TextStyle(fontWeight: FontWeight.w700),
             ),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.shade600,
+              backgroundColor: AppColors.error,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(14),
               ),
             ),
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 20),
       ],
     );
   }
@@ -496,12 +552,13 @@ class _Kartu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
     return Card(
-      elevation: 1.5,
+      elevation: 0,
       margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppColors.borderSubtle, width: 1),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -509,14 +566,14 @@ class _Kartu extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: Row(
               children: [
-                Icon(ikon, size: 18, color: scheme.primary),
+                Icon(ikon, size: 18, color: AppColors.forestGreen),
                 const SizedBox(width: 8),
                 Text(
                   judul,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: scheme.primary,
-                    fontSize: 14,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.deepForest,
+                    fontSize: 14.5,
                   ),
                 ),
               ],
@@ -549,14 +606,18 @@ class _AngkaRingkas extends StatelessWidget {
             '$nilai',
             style: TextStyle(
               fontSize: 22,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w800,
               color: warna,
             ),
           ),
           const SizedBox(height: 2),
           Text(
             label,
-            style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textSecondary,
+            ),
           ),
           const SizedBox(height: 8),
         ],
@@ -588,7 +649,7 @@ class _BarisInfo extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 10),
           child: Row(
             children: [
-              Icon(ikon, size: 20, color: Colors.grey.shade600),
+              Icon(ikon, size: 18, color: AppColors.sageGreen),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
@@ -596,18 +657,20 @@ class _BarisInfo extends StatelessWidget {
                   children: [
                     Text(
                       label,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 11,
-                        color: Colors.grey.shade500,
+                        color: AppColors.textMuted,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       nilai,
                       style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: redup ? Colors.grey.shade400 : null,
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w600,
+                        color: redup
+                            ? AppColors.textMuted
+                            : AppColors.deepForest,
                         fontStyle: redup ? FontStyle.italic : null,
                       ),
                     ),
@@ -638,16 +701,31 @@ class _MenuTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
     return ListTile(
       onTap: onTap,
-      leading: Icon(ikon, color: scheme.primary),
-      title: Text(judul, style: const TextStyle(fontSize: 14)),
+      leading: Icon(ikon, color: AppColors.forestGreen, size: 22),
+      title: Text(
+        judul,
+        style: const TextStyle(
+          fontSize: 13.5,
+          fontWeight: FontWeight.w600,
+          color: AppColors.deepForest,
+        ),
+      ),
       subtitle: subjudul == null
           ? null
-          : Text(subjudul!, style: const TextStyle(fontSize: 12)),
-      trailing: Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400),
+          : Text(
+              subjudul!,
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppColors.textSecondary,
+              ),
+            ),
+      trailing: const Icon(
+        Icons.chevron_right_rounded,
+        color: AppColors.textMuted,
+        size: 20,
+      ),
     );
   }
 }

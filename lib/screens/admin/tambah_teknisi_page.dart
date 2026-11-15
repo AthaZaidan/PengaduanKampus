@@ -1,11 +1,12 @@
 import 'dart:math';
 
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import '../../models/app_user.dart';
 import '../../services/akun_service.dart';
+import '../../theme/app_theme.dart';
 
 /// Admin: form untuk membuat akun teknisi baru.
 class TambahTeknisiPage extends StatefulWidget {
@@ -40,8 +41,10 @@ class _TambahTeknisiPageState extends State<TambahTeknisiPage> {
   void _buatPasswordAcak() {
     const huruf = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
     final acak = Random.secure();
-    final sandi =
-        List.generate(10, (_) => huruf[acak.nextInt(huruf.length)]).join();
+    final sandi = List.generate(
+      10,
+      (_) => huruf[acak.nextInt(huruf.length)],
+    ).join();
     setState(() {
       _passwordController.text = sandi;
       _passwordTersembunyi = false; // tampilkan agar admin bisa mencatatnya
@@ -52,8 +55,7 @@ class _TambahTeknisiPageState extends State<TambahTeknisiPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(pesan),
-        backgroundColor:
-            error ? Colors.red.shade700 : const Color(0xFF10B981),
+        backgroundColor: error ? AppColors.error : AppColors.success,
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -101,8 +103,10 @@ class _TambahTeknisiPageState extends State<TambahTeknisiPage> {
     } on FirebaseException catch (e) {
       if (!mounted) return;
       if (e.code == 'permission-denied') {
-        _snack('Akun gagal disimpan: izin Firestore ditolak. Pastikan Rules '
-            'mengizinkan admin menulis ke koleksi "users".');
+        _snack(
+          'Akun gagal disimpan: izin Firestore ditolak. Pastikan Rules '
+          'mengizinkan admin menulis ke koleksi "users".',
+        );
       } else {
         _snack('Gagal menyimpan data teknisi: ${e.message ?? e.code}');
       }
@@ -123,31 +127,50 @@ class _TambahTeknisiPageState extends State<TambahTeknisiPage> {
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Akun teknisi dibuat'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          'Akun Teknisi Berhasil Dibuat',
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Berikan data login berikut kepada $nama:'),
+            Text(
+              'Berikan kredensial login berikut kepada $nama:',
+              style: const TextStyle(
+                fontSize: 13.5,
+                color: AppColors.deepForest,
+              ),
+            ),
             const SizedBox(height: 12),
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(10),
+                color: AppColors.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.borderSubtle),
               ),
               child: SelectableText(
                 'Email    : $email\nPassword : $password',
-                style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
+                style: const TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.deepForest,
+                  height: 1.4,
+                ),
               ),
             ),
             const SizedBox(height: 10),
-            Text(
-              'Password hanya ditampilkan sekarang. Teknisi dapat '
-              'menggantinya lewat Profil \u2192 Ubah Password.',
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+            const Text(
+              'Password hanya ditampilkan saat ini. Teknisi dapat menggantinya nanti lewat Profil > Ubah Password.',
+              style: TextStyle(
+                fontSize: 12,
+                color: AppColors.textMuted,
+                height: 1.3,
+              ),
             ),
           ],
         ),
@@ -160,7 +183,7 @@ class _TambahTeknisiPageState extends State<TambahTeknisiPage> {
               if (!ctx.mounted) return;
               ScaffoldMessenger.of(ctx).showSnackBar(
                 const SnackBar(
-                  content: Text('Data login disalin.'),
+                  content: Text('Data login disalin ke clipboard.'),
                   behavior: SnackBarBehavior.floating,
                 ),
               );
@@ -170,6 +193,13 @@ class _TambahTeknisiPageState extends State<TambahTeknisiPage> {
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(ctx).pop(),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.forestGreen,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
             child: const Text('Selesai'),
           ),
         ],
@@ -179,153 +209,200 @@ class _TambahTeknisiPageState extends State<TambahTeknisiPage> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Tambah Teknisi'),
-        backgroundColor: scheme.primary,
+        title: const Text('Tambah Teknisi Baru'),
+        backgroundColor: AppColors.forestGreen,
         foregroundColor: Colors.white,
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
           child: Form(
             key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: scheme.primary.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.all(22),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppColors.borderSubtle, width: 1),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.deepForest.withValues(alpha: 0.04),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
                   ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(Icons.info_outline_rounded,
-                          size: 20, color: scheme.primary),
-                      const SizedBox(width: 10),
-                      const Expanded(
-                        child: Text(
-                          'Akun teknisi dibuat langsung oleh admin. Setelah '
-                          'tersimpan, teknisi masuk dengan email dan '
-                          'password di bawah ini.',
-                          style: TextStyle(fontSize: 12.5, height: 1.35),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceContainerLow,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: AppColors.sageGreen.withValues(alpha: 0.35),
+                      ),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(
+                          Icons.info_outline_rounded,
+                          size: 20,
+                          color: AppColors.forestGreen,
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-                TextFormField(
-                  controller: _namaController,
-                  textCapitalization: TextCapitalization.words,
-                  decoration: const InputDecoration(
-                    labelText: 'Nama Lengkap',
-                    hintText: 'Contoh: Rudi Hartono',
-                    prefixIcon: Icon(Icons.person_outline),
-                  ),
-                  validator: (v) => (v == null || v.trim().isEmpty)
-                      ? 'Nama lengkap wajib diisi'
-                      : null,
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    hintText: 'teknisi@kampus.ac.id',
-                    prefixIcon: Icon(Icons.email_outlined),
-                  ),
-                  validator: (v) {
-                    final nilai = v?.trim() ?? '';
-                    if (nilai.isEmpty) return 'Email wajib diisi';
-                    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
-                        .hasMatch(nilai)) {
-                      return 'Format email tidak valid';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _phoneController,
-                  keyboardType: TextInputType.phone,
-                  decoration: const InputDecoration(
-                    labelText: 'Nomor HP / WhatsApp',
-                    hintText: 'Contoh: 081234567890',
-                    prefixIcon: Icon(Icons.phone_outlined),
-                  ),
-                  validator: (v) {
-                    final nilai = v?.trim() ?? '';
-                    if (nilai.isEmpty) return 'Nomor HP wajib diisi';
-                    if (!RegExp(r'^[0-9]+$').hasMatch(nilai)) {
-                      return 'Nomor HP hanya boleh berisi angka';
-                    }
-                    if (nilai.length < 10 || nilai.length > 13) {
-                      return 'Nomor HP tidak valid (10-13 digit)';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _passwordController,
-                  obscureText: _passwordTersembunyi,
-                  decoration: InputDecoration(
-                    labelText: 'Password Awal',
-                    hintText: 'Minimal 6 karakter',
-                    prefixIcon: const Icon(Icons.lock_outline),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _passwordTersembunyi
-                            ? Icons.visibility_off_outlined
-                            : Icons.visibility_outlined,
-                      ),
-                      onPressed: () => setState(
-                          () => _passwordTersembunyi = !_passwordTersembunyi),
+                        const SizedBox(width: 10),
+                        const Expanded(
+                          child: Text(
+                            'Akun teknisi dibuat langsung oleh admin. Teknisi dapat langsung masuk menggunakan email dan password berikut.',
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              height: 1.35,
+                              color: AppColors.deepForest,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  validator: (v) {
-                    if (v == null || v.isEmpty) return 'Password wajib diisi';
-                    if (v.length < 6) return 'Password minimal 6 karakter';
-                    return null;
-                  },
-                ),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton.icon(
-                    onPressed: _sedangMenyimpan ? null : _buatPasswordAcak,
-                    icon: const Icon(Icons.casino_outlined, size: 18),
-                    label: const Text('Buat password acak'),
+                  const SizedBox(height: 20),
+                  TextFormField(
+                    controller: _namaController,
+                    textCapitalization: TextCapitalization.words,
+                    decoration: const InputDecoration(
+                      labelText: 'Nama Lengkap',
+                      hintText: 'Contoh: Rudi Hartono',
+                      prefixIcon: Icon(
+                        Icons.person_outline,
+                        color: AppColors.sageGreen,
+                        size: 20,
+                      ),
+                    ),
+                    validator: (v) => (v == null || v.trim().isEmpty)
+                        ? 'Nama lengkap wajib diisi'
+                        : null,
                   ),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: _sedangMenyimpan ? null : _simpan,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: scheme.primary,
-                    foregroundColor: Colors.white,
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: const InputDecoration(
+                      labelText: 'Email',
+                      hintText: 'teknisi@kampus.ac.id',
+                      prefixIcon: Icon(
+                        Icons.email_outlined,
+                        color: AppColors.sageGreen,
+                        size: 20,
+                      ),
+                    ),
+                    validator: (v) {
+                      final nilai = v?.trim() ?? '';
+                      if (nilai.isEmpty) return 'Email wajib diisi';
+                      if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+                          .hasMatch(nilai)) {
+                        return 'Format email tidak valid';
+                      }
+                      return null;
+                    },
                   ),
-                  child: _sedangMenyimpan
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.5,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Text(
-                          'Buat Akun Teknisi',
-                          style: TextStyle(
-                              fontSize: 15, fontWeight: FontWeight.bold),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _phoneController,
+                    keyboardType: TextInputType.phone,
+                    decoration: const InputDecoration(
+                      labelText: 'Nomor HP / WhatsApp',
+                      hintText: 'Contoh: 081234567890',
+                      prefixIcon: Icon(
+                        Icons.phone_outlined,
+                        color: AppColors.sageGreen,
+                        size: 20,
+                      ),
+                    ),
+                    validator: (v) {
+                      final nilai = v?.trim() ?? '';
+                      if (nilai.isEmpty) return 'Nomor HP wajib diisi';
+                      if (!RegExp(r'^[0-9]+$').hasMatch(nilai)) {
+                        return 'Nomor HP hanya boleh berisi angka';
+                      }
+                      if (nilai.length < 10 || nilai.length > 13) {
+                        return 'Nomor HP tidak valid (10-13 digit)';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _passwordController,
+                    obscureText: _passwordTersembunyi,
+                    decoration: InputDecoration(
+                      labelText: 'Password Awal',
+                      hintText: 'Minimal 6 karakter',
+                      prefixIcon: const Icon(
+                        Icons.lock_outline,
+                        color: AppColors.sageGreen,
+                        size: 20,
+                      ),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _passwordTersembunyi
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
+                          color: AppColors.textMuted,
+                          size: 20,
                         ),
-                ),
-              ],
+                        onPressed: () => setState(
+                          () => _passwordTersembunyi = !_passwordTersembunyi,
+                        ),
+                      ),
+                    ),
+                    validator: (v) {
+                      if (v == null || v.isEmpty) return 'Password wajib diisi';
+                      if (v.length < 6) return 'Password minimal 6 karakter';
+                      return null;
+                    },
+                  ),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: _sedangMenyimpan ? null : _buatPasswordAcak,
+                      icon: const Icon(Icons.casino_outlined, size: 18),
+                      label: const Text('Buat Password Acak'),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: _sedangMenyimpan ? null : _simpan,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.forestGreen,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: _sedangMenyimpan
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text(
+                            'Buat Akun Teknisi',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

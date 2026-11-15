@@ -7,11 +7,7 @@ class FotoViewerPage extends StatefulWidget {
   final List<Uint8List> foto;
   final int initialIndex;
 
-  const FotoViewerPage({
-    super.key,
-    required this.foto,
-    this.initialIndex = 0,
-  });
+  const FotoViewerPage({super.key, required this.foto, this.initialIndex = 0});
 
   @override
   State<FotoViewerPage> createState() => _FotoViewerPageState();

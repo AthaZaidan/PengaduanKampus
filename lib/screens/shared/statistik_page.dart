@@ -1,10 +1,12 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+
 import '../../models/app_user.dart';
 import '../../models/laporan.dart';
 import '../../models/statistik_laporan.dart';
 import '../../providers/laporan_provider.dart';
+import '../../theme/app_theme.dart';
 
 class StatistikPage extends StatelessWidget {
   final LaporanProvider provider;
@@ -14,7 +16,6 @@ class StatistikPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Rebuild otomatis setiap provider memanggil notifyListeners().
     return ListenableBuilder(
       listenable: provider,
       builder: (context, _) => _buildContent(context),
@@ -22,17 +23,16 @@ class StatistikPage extends StatelessWidget {
   }
 
   Widget _buildContent(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final stat = StatistikLaporan.dari(provider.untuk(user));
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF1F5F9),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text(
-          'Statistik',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          'Statistik Laporan',
+          style: TextStyle(fontWeight: FontWeight.w700),
         ),
-        backgroundColor: scheme.primary,
+        backgroundColor: AppColors.forestGreen,
         foregroundColor: Colors.white,
       ),
       body: stat.total == 0
@@ -41,30 +41,31 @@ class StatistikPage extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               children: [
                 _RingkasanGrid(stat: stat),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
                 _KartuSeksi(
                   judul: 'Status Laporan',
                   ikon: Icons.donut_large_rounded,
                   child: _StatusDonut(stat: stat),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
                 _KartuSeksi(
                   judul: 'Laporan per Kategori',
                   ikon: Icons.category_outlined,
                   child: _KategoriBars(stat: stat),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
                 _KartuSeksi(
                   judul: 'Tingkat Prioritas',
                   ikon: Icons.flag_outlined,
                   child: _PrioritasBars(stat: stat),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
                 _KartuSeksi(
-                  judul: '7 Hari Terakhir',
+                  judul: 'Tren 7 Hari Terakhir',
                   ikon: Icons.bar_chart_rounded,
                   child: _TrenChart(stat: stat),
                 ),
+                const SizedBox(height: 30),
               ],
             ),
     );
@@ -82,18 +83,32 @@ class _KosongState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.bar_chart_rounded,
-                size: 64, color: Colors.grey.shade400),
-            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.softSage.withValues(alpha: 0.35),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.bar_chart_rounded,
+                size: 44,
+                color: AppColors.sageGreen,
+              ),
+            ),
+            const SizedBox(height: 14),
             const Text(
-              'Belum ada data statistik',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              'Belum Ada Data Statistik',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: AppColors.deepForest,
+              ),
             ),
             const SizedBox(height: 4),
-            Text(
-              'Statistik akan muncul setelah ada laporan masuk.',
+            const Text(
+              'Statistik performa dan pengaduan akan muncul setelah ada laporan tercatat.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
             ),
           ],
         ),
@@ -115,12 +130,13 @@ class _KartuSeksi extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
     return Card(
-      elevation: 1.5,
+      elevation: 0,
       margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppColors.borderSubtle, width: 1),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -128,19 +144,19 @@ class _KartuSeksi extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(ikon, size: 18, color: scheme.primary),
+                Icon(ikon, size: 18, color: AppColors.forestGreen),
                 const SizedBox(width: 8),
                 Text(
                   judul,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: scheme.primary,
-                    fontSize: 14,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.deepForest,
+                    fontSize: 14.5,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
             child,
           ],
         ),
@@ -160,8 +176,6 @@ class _RingkasanGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
     return Column(
       children: [
         Row(
@@ -169,7 +183,8 @@ class _RingkasanGrid extends StatelessWidget {
             Expanded(
               child: _MiniStat(
                 ikon: Icons.assignment_outlined,
-                warna: scheme.primary,
+                warna: AppColors.forestGreen,
+                latar: AppColors.softSage.withValues(alpha: 0.5),
                 nilai: '${stat.total}',
                 label: 'Total Laporan',
               ),
@@ -178,9 +193,10 @@ class _RingkasanGrid extends StatelessWidget {
             Expanded(
               child: _MiniStat(
                 ikon: Icons.task_alt_rounded,
-                warna: StatusLaporan.selesai.color,
+                warna: AppColors.statusSelesai,
+                latar: AppColors.statusSelesaiBg,
                 nilai: '${(stat.tingkatPenyelesaian * 100).round()}%',
-                label: 'Tingkat Penyelesaian',
+                label: 'Tingkat Selesai',
               ),
             ),
           ],
@@ -191,16 +207,18 @@ class _RingkasanGrid extends StatelessWidget {
             Expanded(
               child: _MiniStat(
                 ikon: Icons.timer_outlined,
-                warna: const Color(0xFF8B5CF6),
+                warna: AppColors.mutedTeal,
+                latar: AppColors.mutedTeal.withValues(alpha: 0.15),
                 nilai: StatistikLaporan.formatDurasi(stat.rataRataPenyelesaian),
-                label: 'Rata-rata Penyelesaian',
+                label: 'Rata-rata Penanganan',
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: _MiniStat(
                 ikon: Icons.hourglass_empty_rounded,
-                warna: StatusLaporan.menunggu.color,
+                warna: AppColors.statusMenunggu,
+                latar: AppColors.statusMenungguBg,
                 nilai: '${stat.menunggu}',
                 label: 'Menunggu Tindakan',
               ),
@@ -215,67 +233,78 @@ class _RingkasanGrid extends StatelessWidget {
 class _MiniStat extends StatelessWidget {
   final IconData ikon;
   final Color warna;
+  final Color latar;
   final String nilai;
   final String label;
 
   const _MiniStat({
     required this.ikon,
     required this.warna,
+    required this.latar,
     required this.nilai,
     required this.label,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 1.5,
-      margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: warna.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(ikon, color: warna, size: 22),
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.borderSubtle, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.deepForest.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(14),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: latar,
+              borderRadius: BorderRadius.circular(12),
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      nilai,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+            child: Icon(ikon, color: warna, size: 22),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    nilai,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.deepForest,
                     ),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    label,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.grey.shade600,
-                      height: 1.2,
-                    ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  label,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.textSecondary,
+                    height: 1.2,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -297,19 +326,19 @@ class _StatusDonut extends StatelessWidget {
     return Row(
       children: [
         SizedBox(
-          width: 120,
-          height: 120,
+          width: 124,
+          height: 124,
           child: Stack(
             alignment: Alignment.center,
             children: [
               CustomPaint(
-                size: const Size(120, 120),
+                size: const Size(124, 124),
                 painter: _DonutPainter(
                   nilai: [
                     for (final s in daftar) (stat.perStatus[s] ?? 0).toDouble(),
                   ],
                   warna: [for (final s in daftar) s.color],
-                  warnaTrack: Colors.grey.shade200,
+                  warnaTrack: AppColors.surfaceContainer,
                   tebal: 16,
                 ),
               ),
@@ -320,30 +349,31 @@ class _StatusDonut extends StatelessWidget {
                     '${stat.total}',
                     style: const TextStyle(
                       fontSize: 24,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.deepForest,
                     ),
                   ),
-                  Text(
+                  const Text(
                     'laporan',
-                    style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                    style: TextStyle(fontSize: 11, color: AppColors.textMuted),
                   ),
                 ],
               ),
             ],
           ),
         ),
-        const SizedBox(width: 20),
+        const SizedBox(width: 18),
         Expanded(
           child: Column(
             children: [
               for (final s in daftar)
                 Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  padding: const EdgeInsets.symmetric(vertical: 3.5),
                   child: Row(
                     children: [
                       Container(
-                        width: 10,
-                        height: 10,
+                        width: 9,
+                        height: 9,
                         decoration: BoxDecoration(
                           color: s.color,
                           shape: BoxShape.circle,
@@ -351,21 +381,31 @@ class _StatusDonut extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       Expanded(
-                        child:
-                            Text(s.label, style: const TextStyle(fontSize: 13)),
+                        child: Text(
+                          s.label,
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.deepForest,
+                          ),
+                        ),
                       ),
                       Text(
                         '${stat.perStatus[s] ?? 0}',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12.5,
+                          color: AppColors.deepForest,
+                        ),
                       ),
                       SizedBox(
-                        width: 40,
+                        width: 42,
                         child: Text(
                           '${_persen(stat.perStatus[s] ?? 0, stat.total)}%',
                           textAlign: TextAlign.right,
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 11,
-                            color: Colors.grey.shade600,
+                            color: AppColors.textMuted,
                           ),
                         ),
                       ),
@@ -421,6 +461,7 @@ class _DonutPainter extends CustomPainter {
       final paint = Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = tebal
+        ..strokeCap = StrokeCap.round
         ..color = warna[i];
       canvas.drawArc(rect, mulai, sapuan, false, paint);
       mulai += sapuan;
@@ -460,13 +501,17 @@ class _BarRow extends StatelessWidget {
             width: 120,
             child: Row(
               children: [
-                Icon(ikon, size: 16, color: Colors.grey.shade600),
-                const SizedBox(width: 6),
+                Icon(ikon, size: 16, color: AppColors.sageGreen),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     label,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 12.5),
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.deepForest,
+                    ),
                   ),
                 ),
               ],
@@ -478,17 +523,21 @@ class _BarRow extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: maks == 0 ? 0 : nilai / maks,
                 minHeight: 10,
-                backgroundColor: warna.withValues(alpha: 0.12),
+                backgroundColor: AppColors.surfaceContainerLow,
                 valueColor: AlwaysStoppedAnimation<Color>(warna),
               ),
             ),
           ),
           SizedBox(
-            width: 28,
+            width: 32,
             child: Text(
               '$nilai',
               textAlign: TextAlign.right,
-              style: const TextStyle(fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                color: AppColors.deepForest,
+                fontSize: 12.5,
+              ),
             ),
           ),
         ],
@@ -504,10 +553,11 @@ class _KategoriBars extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final urut = KategoriKerusakan.values.toList()
-      ..sort((a, b) =>
-          (stat.perKategori[b] ?? 0).compareTo(stat.perKategori[a] ?? 0));
+      ..sort(
+        (a, b) =>
+            (stat.perKategori[b] ?? 0).compareTo(stat.perKategori[a] ?? 0),
+      );
     final maks = stat.perKategori.values.fold<int>(0, math.max);
     final teratas = urut.first;
     final jumlahTeratas = stat.perKategori[teratas] ?? 0;
@@ -517,10 +567,14 @@ class _KategoriBars extends StatelessWidget {
       children: [
         if (jumlahTeratas > 0)
           Padding(
-            padding: const EdgeInsets.only(bottom: 6),
+            padding: const EdgeInsets.only(bottom: 8),
             child: Text(
-              'Terbanyak: ${teratas.label} ($jumlahTeratas laporan)',
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+              'Paling sering dilaporkan: ${teratas.label} ($jumlahTeratas laporan)',
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.forestGreen,
+              ),
             ),
           ),
         for (final k in urut)
@@ -529,7 +583,7 @@ class _KategoriBars extends StatelessWidget {
             ikon: k.icon,
             nilai: stat.perKategori[k] ?? 0,
             maks: maks,
-            warna: scheme.primary,
+            warna: AppColors.forestGreen,
           ),
       ],
     );
@@ -579,7 +633,6 @@ class _TrenChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final maks = stat.tujuhHari.fold<int>(0, (m, e) => math.max(m, e.value));
 
     return SizedBox(
@@ -594,10 +647,12 @@ class _TrenChart extends StatelessWidget {
                 tinggi: stat.tujuhHari[i].value == 0
                     ? 3.0
                     : math.max(
-                        8.0, _tinggiMaks * stat.tujuhHari[i].value / maks),
+                        8.0,
+                        _tinggiMaks * stat.tujuhHari[i].value / maks,
+                      ),
                 label: _namaHari[stat.tujuhHari[i].key.weekday - 1],
                 hariIni: i == stat.tujuhHari.length - 1,
-                warna: scheme.primary,
+                warna: AppColors.forestGreen,
               ),
             ),
         ],
@@ -628,16 +683,22 @@ class _Batang extends StatelessWidget {
       children: [
         Text(
           jumlah == 0 ? '' : '$jumlah',
-          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: hariIni ? AppColors.forestGreen : AppColors.deepForest,
+          ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 5),
         Container(
-          width: 22,
+          width: 20,
           height: tinggi,
           decoration: BoxDecoration(
             color: jumlah == 0
-                ? Colors.grey.shade300
-                : (hariIni ? warna : warna.withValues(alpha: 0.4)),
+                ? AppColors.surfaceContainerHigh
+                : (hariIni
+                      ? warna
+                      : AppColors.sageGreen.withValues(alpha: 0.5)),
             borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
           ),
         ),
@@ -646,8 +707,8 @@ class _Batang extends StatelessWidget {
           label,
           style: TextStyle(
             fontSize: 11,
-            fontWeight: hariIni ? FontWeight.bold : FontWeight.normal,
-            color: hariIni ? warna : Colors.grey.shade600,
+            fontWeight: hariIni ? FontWeight.w700 : FontWeight.w500,
+            color: hariIni ? warna : AppColors.textSecondary,
           ),
         ),
       ],

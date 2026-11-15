@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+
 import '../models/laporan.dart';
 import '../models/statistik_laporan.dart';
+import '../theme/app_theme.dart';
 
 /// Penanda SLA: sisa waktu / terlambat (laporan aktif) atau hasil akhir.
 class SlaChip extends StatelessWidget {
@@ -16,42 +18,51 @@ class SlaChip extends StatelessWidget {
 
     final String teks;
     final Color warna;
+    final Color bgColor;
 
     if (laporan.aktif) {
       final sisa = laporan.batasSla.difference(DateTime.now());
       if (sisa.isNegative) {
         teks = 'Lewat SLA ${StatistikLaporan.formatDurasi(-sisa)}';
-        warna = const Color(0xFFEF4444);
+        warna = AppColors.statusDitolak;
+        bgColor = AppColors.statusDitolakBg;
       } else {
         teks = 'Sisa ${StatistikLaporan.formatDurasi(sisa)}';
-        warna = sisa < const Duration(hours: 6)
-            ? const Color(0xFFF59E0B)
-            : const Color(0xFF10B981);
+        if (sisa < const Duration(hours: 6)) {
+          warna = AppColors.statusMenunggu;
+          bgColor = AppColors.statusMenungguBg;
+        } else {
+          warna = AppColors.statusSelesai;
+          bgColor = AppColors.statusSelesaiBg;
+        }
       }
     } else if (laporan.melewatiSla) {
       teks = 'Selesai lewat SLA';
-      warna = const Color(0xFFEF4444);
+      warna = AppColors.statusDitolak;
+      bgColor = AppColors.statusDitolakBg;
     } else {
-      teks = 'Selesai sesuai SLA';
-      warna = const Color(0xFF10B981);
+      teks = 'Selesai tepat waktu';
+      warna = AppColors.statusSelesai;
+      bgColor = AppColors.statusSelesaiBg;
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: warna.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(6),
+        color: bgColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: warna.withValues(alpha: 0.25), width: 0.8),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.timer_outlined, size: 11, color: warna),
-          const SizedBox(width: 3),
+          Icon(Icons.timer_outlined, size: 12, color: warna),
+          const SizedBox(width: 4),
           Text(
             teks,
             style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
+              fontSize: 10.5,
+              fontWeight: FontWeight.w700,
               color: warna,
             ),
           ),

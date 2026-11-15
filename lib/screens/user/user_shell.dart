@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+
 import '../../models/app_user.dart';
 import '../../providers/laporan_provider.dart';
+import '../../theme/app_theme.dart';
 import '../shared/kerangka_navigasi.dart';
 import '../shared/profile_page.dart';
 import '../shared/statistik_page.dart';
@@ -13,11 +15,7 @@ class UserShell extends StatefulWidget {
   final LaporanProvider provider;
   final AppUser user;
 
-  const UserShell({
-    super.key,
-    required this.provider,
-    required this.user,
-  });
+  const UserShell({super.key, required this.provider, required this.user});
 
   @override
   State<UserShell> createState() => _UserShellState();
@@ -48,8 +46,12 @@ class _UserShellState extends State<UserShell> {
         Icons.list_alt_rounded,
         UserLaporanPage(provider: p, user: u),
       ),
-      TabNav('Statistik', Icons.bar_chart_outlined, Icons.bar_chart_rounded,
-          StatistikPage(provider: p, user: u)),
+      TabNav(
+        'Statistik',
+        Icons.bar_chart_outlined,
+        Icons.bar_chart_rounded,
+        StatistikPage(provider: p, user: u),
+      ),
       TabNav(
         'Profil',
         Icons.person_outline_rounded,
@@ -65,18 +67,14 @@ class _UserShellState extends State<UserShell> {
   void _buatLaporan() {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => BuatLaporanPage(
-          provider: widget.provider,
-          user: widget.user,
-        ),
+        builder: (_) =>
+            BuatLaporanPage(provider: widget.provider, user: widget.user),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
     return KerangkaNavigasi(
       tabs: _tabs,
       index: _index,
@@ -84,13 +82,16 @@ class _UserShellState extends State<UserShell> {
       tombolAksi: _tampilkanTombolBuat
           ? FloatingActionButton.extended(
               onPressed: _buatLaporan,
-              backgroundColor: scheme.primary,
+              backgroundColor: AppColors.forestGreen,
               foregroundColor: Colors.white,
-              elevation: 4,
+              elevation: 2.5,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
               icon: const Icon(Icons.add_rounded),
               label: const Text(
                 'Buat Laporan',
-                style: TextStyle(fontWeight: FontWeight.bold),
+                style: TextStyle(fontWeight: FontWeight.w700),
               ),
             )
           : null,

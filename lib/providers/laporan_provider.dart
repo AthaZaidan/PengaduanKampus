@@ -1,6 +1,5 @@
-import 'dart:typed_data';
-
 import 'package:flutter/foundation.dart';
+
 import '../models/app_user.dart';
 import '../models/laporan.dart';
 
@@ -23,8 +22,7 @@ class LaporanProvider extends ChangeNotifier {
       Laporan(
         id: 'RPT-001',
         judul: 'AC Kelas 3.2 Tidak Berfungsi',
-        deskripsi:
-            'AC di ruang kelas 3.2 gedung B sudah tidak berfungsi selama 3 hari. Suhu ruangan sangat panas sehingga mengganggu proses belajar mengajar.',
+        deskripsi: 'AC di ruang kelas 3.2 gedung B sudah tidak berfungsi selama 3 hari. Suhu ruangan sangat panas sehingga mengganggu proses belajar mengajar.',
         lokasi: 'Gedung B - Ruang 3.2',
         kategori: KategoriKerusakan.fasilitas,
         prioritas: PrioritasLaporan.tinggi,
@@ -62,8 +60,7 @@ class LaporanProvider extends ChangeNotifier {
       Laporan(
         id: 'RPT-002',
         judul: 'Toilet Lantai 2 Tersumbat',
-        deskripsi:
-            'Toilet di lantai 2 gedung A mengalami penyumbatan dan mengeluarkan bau tidak sedap.',
+        deskripsi: 'Toilet di lantai 2 gedung A mengalami penyumbatan dan mengeluarkan bau tidak sedap.',
         lokasi: 'Gedung A - Lantai 2',
         kategori: KategoriKerusakan.kebersihan,
         prioritas: PrioritasLaporan.sedang,
@@ -74,8 +71,7 @@ class LaporanProvider extends ChangeNotifier {
       Laporan(
         id: 'RPT-003',
         judul: 'Wifi Lab Komputer Putus',
-        deskripsi:
-            'Koneksi wifi di laboratorium komputer lantai 1 terputus-putus dan sangat lambat sejak semalam.',
+        deskripsi: 'Koneksi wifi di laboratorium komputer lantai 1 terputus-putus dan sangat lambat sejak semalam.',
         lokasi: 'Gedung C - Lab Komputer Lt.1',
         kategori: KategoriKerusakan.internet,
         prioritas: PrioritasLaporan.tinggi,
@@ -120,8 +116,7 @@ class LaporanProvider extends ChangeNotifier {
       Laporan(
         id: 'RPT-004',
         judul: 'Lampu Koridor Gedung A Mati',
-        deskripsi:
-            'Tiga lampu di koridor lantai 1 gedung A mati sehingga area tersebut gelap pada sore hari.',
+        deskripsi: 'Tiga lampu di koridor lantai 1 gedung A mati sehingga area tersebut gelap pada sore hari.',
         lokasi: 'Gedung A - Koridor Lt.1',
         kategori: KategoriKerusakan.listrik,
         prioritas: PrioritasLaporan.rendah,
@@ -212,10 +207,13 @@ class LaporanProvider extends ChangeNotifier {
   bool verifikasi(String id, {required String oleh, String? catatan}) {
     final l = _cari(id);
     if (l == null || l.status != StatusLaporan.menunggu) return false;
-    _catat(l, StatusLaporan.diverifikasi,
-        oleh: oleh,
-        catatan: catatan,
-        catatanDefault: 'Laporan dinyatakan valid.');
+    _catat(
+      l,
+      StatusLaporan.diverifikasi,
+      oleh: oleh,
+      catatan: catatan,
+      catatanDefault: 'Laporan dinyatakan valid.',
+    );
     return true;
   }
 
@@ -227,8 +225,13 @@ class LaporanProvider extends ChangeNotifier {
         l.status != StatusLaporan.diverifikasi) {
       return false;
     }
-    _catat(l, StatusLaporan.ditolak,
-        oleh: oleh, catatan: alasan, catatanDefault: 'Laporan ditolak.');
+    _catat(
+      l,
+      StatusLaporan.ditolak,
+      oleh: oleh,
+      catatan: alasan,
+      catatanDefault: 'Laporan ditolak.',
+    );
     return true;
   }
 
@@ -250,12 +253,15 @@ class LaporanProvider extends ChangeNotifier {
     final ganti = l.status == StatusLaporan.ditugaskan;
     l.teknisiId = teknisiId;
     l.teknisiNama = teknisiNama;
-    _catat(l, StatusLaporan.ditugaskan,
-        oleh: oleh,
-        catatan: catatan,
-        catatanDefault: ganti
-            ? 'Teknisi diganti menjadi $teknisiNama.'
-            : 'Ditugaskan kepada $teknisiNama.');
+    _catat(
+      l,
+      StatusLaporan.ditugaskan,
+      oleh: oleh,
+      catatan: catatan,
+      catatanDefault: ganti
+          ? 'Teknisi diganti menjadi $teknisiNama.'
+          : 'Ditugaskan kepada $teknisiNama.',
+    );
     return true;
   }
 
@@ -263,10 +269,13 @@ class LaporanProvider extends ChangeNotifier {
   bool mulaiKerja(String id, {required String oleh, String? catatan}) {
     final l = _cari(id);
     if (l == null || l.status != StatusLaporan.ditugaskan) return false;
-    _catat(l, StatusLaporan.diproses,
-        oleh: oleh,
-        catatan: catatan,
-        catatanDefault: 'Teknisi mulai mengerjakan.');
+    _catat(
+      l,
+      StatusLaporan.diproses,
+      oleh: oleh,
+      catatan: catatan,
+      catatanDefault: 'Teknisi mulai mengerjakan.',
+    );
     return true;
   }
 
@@ -280,8 +289,13 @@ class LaporanProvider extends ChangeNotifier {
     final l = _cari(id);
     if (l == null || l.status != StatusLaporan.diproses) return false;
     l.fotoSesudah.addAll(fotoSesudah);
-    _catat(l, StatusLaporan.selesai,
-        oleh: oleh, catatan: catatan, catatanDefault: 'Pekerjaan selesai.');
+    _catat(
+      l,
+      StatusLaporan.selesai,
+      oleh: oleh,
+      catatan: catatan,
+      catatanDefault: 'Pekerjaan selesai.',
+    );
     return true;
   }
 

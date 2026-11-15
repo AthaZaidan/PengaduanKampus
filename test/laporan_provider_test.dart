@@ -61,8 +61,11 @@ void main() {
       final laporan = _laporanBaru(provider.generateId());
       provider.tambahLaporan(laporan);
 
-      provider.updateStatus(laporan.id, StatusLaporan.diproses,
-          catatan: 'Sedang dicek');
+      provider.updateStatus(
+        laporan.id,
+        StatusLaporan.diproses,
+        catatan: 'Sedang dicek',
+      );
       provider.updateStatus(laporan.id, StatusLaporan.selesai, catatan: '   ');
 
       expect(laporan.catatanAdmin, 'Sedang dicek');

@@ -60,23 +60,32 @@ void main() {
       provider.tambahLaporan(_buat('A', pelaporId: 'u1'));
       provider.tambahLaporan(_buat('B', pelaporId: 'u2'));
       provider.verifikasi('A', oleh: 'Admin');
-      provider.tugaskan('A',
-          teknisiId: 't1', teknisiNama: 'Teknisi 1', oleh: 'Admin');
+      provider.tugaskan(
+        'A',
+        teknisiId: 't1',
+        teknisiNama: 'Teknisi 1',
+        oleh: 'Admin',
+      );
 
-      expect(provider.untuk(_user('u1', PeranPengguna.mahasiswa)).map((l) => l.id),
-          ['A']);
-      expect(provider.untuk(_user('u2', PeranPengguna.dosen)).map((l) => l.id),
-          ['B']);
+      expect(
+        provider.untuk(_user('u1', PeranPengguna.mahasiswa)).map((l) => l.id),
+        ['A'],
+      );
+      expect(
+        provider.untuk(_user('u2', PeranPengguna.dosen)).map((l) => l.id),
+        ['B'],
+      );
       expect(provider.untuk(_user('x', PeranPengguna.admin)).length, awal + 2);
-      expect(provider.untuk(_user('t1', PeranPengguna.teknisi)).map((l) => l.id),
-          ['A']);
+      expect(
+        provider.untuk(_user('t1', PeranPengguna.teknisi)).map((l) => l.id),
+        ['A'],
+      );
       expect(provider.untuk(_user('t2', PeranPengguna.teknisi)), isEmpty);
     });
   });
 
   group('Alur status', () {
-    test('alur lengkap: dilaporkan > terverifikasi > ditugaskan > dikerjakan > selesai',
-        () {
+    test('alur lengkap: dilaporkan > terverifikasi > ditugaskan > dikerjakan > selesai', () {
       final provider = LaporanProvider();
       final l = _buat('ALUR');
       provider.tambahLaporan(l);
@@ -87,8 +96,12 @@ void main() {
       expect(l.status, StatusLaporan.diverifikasi);
 
       expect(
-        provider.tugaskan('ALUR',
-            teknisiId: 't1', teknisiNama: 'Pak Rudi', oleh: 'Admin'),
+        provider.tugaskan(
+          'ALUR',
+          teknisiId: 't1',
+          teknisiNama: 'Pak Rudi',
+          oleh: 'Admin',
+        ),
         isTrue,
       );
       expect(l.status, StatusLaporan.ditugaskan);
@@ -98,10 +111,16 @@ void main() {
       expect(provider.mulaiKerja('ALUR', oleh: 'Pak Rudi'), isTrue);
       expect(l.status, StatusLaporan.diproses);
 
-      final foto = [Uint8List.fromList([1, 2, 3])];
+      final foto = [
+        Uint8List.fromList([1, 2, 3]),
+      ];
       expect(
-        provider.selesaikan('ALUR',
-            oleh: 'Pak Rudi', catatan: 'AC sudah diperbaiki', fotoSesudah: foto),
+        provider.selesaikan(
+          'ALUR',
+          oleh: 'Pak Rudi',
+          catatan: 'AC sudah diperbaiki',
+          fotoSesudah: foto,
+        ),
         isTrue,
       );
       expect(l.status, StatusLaporan.selesai);
@@ -125,8 +144,12 @@ void main() {
 
       // belum diverifikasi
       expect(
-        provider.tugaskan('SALAH',
-            teknisiId: 't1', teknisiNama: 'T', oleh: 'Admin'),
+        provider.tugaskan(
+          'SALAH',
+          teknisiId: 't1',
+          teknisiNama: 'T',
+          oleh: 'Admin',
+        ),
         isFalse,
       );
       expect(provider.mulaiKerja('SALAH', oleh: 'T'), isFalse);
@@ -148,7 +171,9 @@ void main() {
       expect(l.status, StatusLaporan.menunggu);
 
       expect(
-          provider.tolak('TOLAK', oleh: 'Admin', alasan: 'Laporan ganda'), isTrue);
+        provider.tolak('TOLAK', oleh: 'Admin', alasan: 'Laporan ganda'),
+        isTrue,
+      );
       expect(l.status, StatusLaporan.ditolak);
       expect(l.catatanAdmin, 'Laporan ganda');
       expect(l.aktif, isFalse);
@@ -162,12 +187,20 @@ void main() {
       final l = _buat('GANTI');
       provider.tambahLaporan(l);
       provider.verifikasi('GANTI', oleh: 'Admin');
-      provider.tugaskan('GANTI',
-          teknisiId: 't1', teknisiNama: 'Satu', oleh: 'Admin');
+      provider.tugaskan(
+        'GANTI',
+        teknisiId: 't1',
+        teknisiNama: 'Satu',
+        oleh: 'Admin',
+      );
 
       expect(
-        provider.tugaskan('GANTI',
-            teknisiId: 't2', teknisiNama: 'Dua', oleh: 'Admin'),
+        provider.tugaskan(
+          'GANTI',
+          teknisiId: 't2',
+          teknisiNama: 'Dua',
+          oleh: 'Admin',
+        ),
         isTrue,
       );
       expect(l.status, StatusLaporan.ditugaskan);
@@ -177,8 +210,12 @@ void main() {
       // setelah dikerjakan tidak bisa diganti lagi
       provider.mulaiKerja('GANTI', oleh: 'Dua');
       expect(
-        provider.tugaskan('GANTI',
-            teknisiId: 't3', teknisiNama: 'Tiga', oleh: 'Admin'),
+        provider.tugaskan(
+          'GANTI',
+          teknisiId: 't3',
+          teknisiNama: 'Tiga',
+          oleh: 'Admin',
+        ),
         isFalse,
       );
     });
@@ -203,37 +240,44 @@ void main() {
       expect(lama.melewatiSla, isTrue);
     });
 
-    test('laporan selesai dinilai dari waktu selesai, bukan waktu sekarang', () {
-      final provider = LaporanProvider();
-      final l = _buat(
-        'CEPAT',
-        prioritas: PrioritasLaporan.tinggi,
-        tanggal: DateTime.now().subtract(const Duration(days: 10)),
-      );
-      // Riwayat dibuat manual: selesai 2 jam setelah dilaporkan.
-      final dibuat = l.tanggalLapor;
-      final selesai = Laporan(
-        id: 'CEPAT2',
-        judul: 'x',
-        deskripsi: 'x',
-        lokasi: 'x',
-        kategori: KategoriKerusakan.fasilitas,
-        prioritas: PrioritasLaporan.tinggi,
-        pelapor: 'T',
-        tanggalLapor: dibuat,
-        status: StatusLaporan.selesai,
-        riwayat: [
-          RiwayatStatus(status: StatusLaporan.menunggu, waktu: dibuat, oleh: 'T'),
-          RiwayatStatus(
-            status: StatusLaporan.selesai,
-            waktu: dibuat.add(const Duration(hours: 2)),
-            oleh: 'Teknisi',
-          ),
-        ],
-      );
-      provider.tambahLaporan(selesai);
+    test(
+      'laporan selesai dinilai dari waktu selesai, bukan waktu sekarang',
+      () {
+        final provider = LaporanProvider();
+        final l = _buat(
+          'CEPAT',
+          prioritas: PrioritasLaporan.tinggi,
+          tanggal: DateTime.now().subtract(const Duration(days: 10)),
+        );
+        // Riwayat dibuat manual: selesai 2 jam setelah dilaporkan.
+        final dibuat = l.tanggalLapor;
+        final selesai = Laporan(
+          id: 'CEPAT2',
+          judul: 'x',
+          deskripsi: 'x',
+          lokasi: 'x',
+          kategori: KategoriKerusakan.fasilitas,
+          prioritas: PrioritasLaporan.tinggi,
+          pelapor: 'T',
+          tanggalLapor: dibuat,
+          status: StatusLaporan.selesai,
+          riwayat: [
+            RiwayatStatus(
+              status: StatusLaporan.menunggu,
+              waktu: dibuat,
+              oleh: 'T',
+            ),
+            RiwayatStatus(
+              status: StatusLaporan.selesai,
+              waktu: dibuat.add(const Duration(hours: 2)),
+              oleh: 'Teknisi',
+            ),
+          ],
+        );
+        provider.tambahLaporan(selesai);
 
-      expect(selesai.melewatiSla, isFalse);
-    });
+        expect(selesai.melewatiSla, isFalse);
+      },
+    );
   });
 }

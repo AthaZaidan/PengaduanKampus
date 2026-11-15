@@ -2,6 +2,8 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
+import '../theme/app_theme.dart';
+
 /// Alur: dilaporkan (menunggu) -> terverifikasi -> ditugaskan -> dikerjakan
 /// (diproses) -> selesai. Laporan yang tidak valid berakhir sebagai ditolak.
 enum StatusLaporan {
@@ -73,17 +75,18 @@ class Laporan {
     List<Uint8List>? foto,
     List<Uint8List>? fotoSesudah,
     List<RiwayatStatus>? riwayat,
-  })  : foto = foto ?? const [],
-        fotoSesudah = fotoSesudah ?? <Uint8List>[],
-        riwayat = riwayat ??
-            [
-              RiwayatStatus(
-                status: status,
-                waktu: tanggalLapor,
-                oleh: pelapor,
-                catatan: 'Laporan dibuat',
-              ),
-            ];
+  }) : foto = foto ?? const [],
+       fotoSesudah = fotoSesudah ?? <Uint8List>[],
+       riwayat =
+           riwayat ??
+           [
+             RiwayatStatus(
+               status: status,
+               waktu: tanggalLapor,
+               oleh: pelapor,
+               catatan: 'Laporan dibuat',
+             ),
+           ];
 
   /// Batas waktu penyelesaian (SLA) berdasarkan prioritas.
   DateTime get batasSla => tanggalLapor.add(prioritas.targetSla);
@@ -141,17 +144,34 @@ extension StatusLaporanExt on StatusLaporan {
   Color get color {
     switch (this) {
       case StatusLaporan.menunggu:
-        return const Color(0xFFF59E0B);
+        return AppColors.statusMenunggu;
       case StatusLaporan.diverifikasi:
-        return const Color(0xFF8B5CF6);
+        return AppColors.statusDiverifikasi;
       case StatusLaporan.ditugaskan:
-        return const Color(0xFF06B6D4);
+        return AppColors.statusDitugaskan;
       case StatusLaporan.diproses:
-        return const Color(0xFF3B82F6);
+        return AppColors.statusDiproses;
       case StatusLaporan.selesai:
-        return const Color(0xFF10B981);
+        return AppColors.statusSelesai;
       case StatusLaporan.ditolak:
-        return const Color(0xFFEF4444);
+        return AppColors.statusDitolak;
+    }
+  }
+
+  Color get backgroundColor {
+    switch (this) {
+      case StatusLaporan.menunggu:
+        return AppColors.statusMenungguBg;
+      case StatusLaporan.diverifikasi:
+        return AppColors.statusDiverifikasiBg;
+      case StatusLaporan.ditugaskan:
+        return AppColors.statusDitugaskanBg;
+      case StatusLaporan.diproses:
+        return AppColors.statusDiprosesBg;
+      case StatusLaporan.selesai:
+        return AppColors.statusSelesaiBg;
+      case StatusLaporan.ditolak:
+        return AppColors.statusDitolakBg;
     }
   }
 
@@ -228,11 +248,22 @@ extension PrioritasExt on PrioritasLaporan {
   Color get color {
     switch (this) {
       case PrioritasLaporan.rendah:
-        return const Color(0xFF6B7280);
+        return AppColors.sageGreen;
       case PrioritasLaporan.sedang:
-        return const Color(0xFFF59E0B);
+        return AppColors.statusMenunggu;
       case PrioritasLaporan.tinggi:
-        return const Color(0xFFEF4444);
+        return AppColors.error;
+    }
+  }
+
+  Color get backgroundColor {
+    switch (this) {
+      case PrioritasLaporan.rendah:
+        return AppColors.softSage.withValues(alpha: 0.4);
+      case PrioritasLaporan.sedang:
+        return AppColors.statusMenungguBg;
+      case PrioritasLaporan.tinggi:
+        return AppColors.statusDitolakBg;
     }
   }
 }

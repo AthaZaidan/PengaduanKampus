@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../models/app_user.dart';
 import '../../providers/laporan_provider.dart';
 import '../shared/kerangka_navigasi.dart';
@@ -14,11 +15,7 @@ class AdminShell extends StatefulWidget {
   final LaporanProvider provider;
   final AppUser user;
 
-  const AdminShell({
-    super.key,
-    required this.provider,
-    required this.user,
-  });
+  const AdminShell({super.key, required this.provider, required this.user});
 
   @override
   State<AdminShell> createState() => _AdminShellState();
@@ -49,8 +46,12 @@ class _AdminShellState extends State<AdminShell> {
         Icons.list_alt_rounded,
         AdminLaporanPage(provider: p, user: u),
       ),
-      TabNav('Statistik', Icons.bar_chart_outlined, Icons.bar_chart_rounded,
-          StatistikPage(provider: p, user: u)),
+      TabNav(
+        'Statistik',
+        Icons.bar_chart_outlined,
+        Icons.bar_chart_rounded,
+        StatistikPage(provider: p, user: u),
+      ),
       TabNav(
         'Teknisi',
         Icons.engineering_outlined,

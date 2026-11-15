@@ -2,9 +2,11 @@ import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+
 import '../../models/app_user.dart';
 import '../../models/laporan.dart';
 import '../../providers/laporan_provider.dart';
+import '../../theme/app_theme.dart';
 import '../../widgets/foto_picker_field.dart';
 import '../../widgets/foto_viewer.dart';
 
@@ -38,8 +40,14 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
         behavior: SnackBarBehavior.floating,
         backgroundColor: warna,
         margin: const EdgeInsets.all(16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        content: Text(pesan, style: const TextStyle(color: Colors.white)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        content: Text(
+          pesan,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ),
     );
   }
@@ -60,8 +68,16 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialog) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text(judul),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Text(
+            judul,
+            style: const TextStyle(
+              fontWeight: FontWeight.w700,
+              color: AppColors.deepForest,
+            ),
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -71,7 +87,10 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
                   padding: const EdgeInsets.only(bottom: 10),
                   child: Text(
                     deskripsi,
-                    style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                 ),
               TextField(
@@ -81,7 +100,7 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
                   hintText: hint,
                   errorText: galat,
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   contentPadding: const EdgeInsets.all(12),
                 ),
@@ -105,6 +124,9 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: warna,
                 foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               child: Text(tombol),
             ),
@@ -123,8 +145,11 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
       warna: StatusLaporan.diverifikasi.color,
     );
     if (catatan == null) return;
-    final ok = widget.provider
-        .verifikasi(_laporan.id, oleh: _user.nama, catatan: catatan);
+    final ok = widget.provider.verifikasi(
+      _laporan.id,
+      oleh: _user.nama,
+      catatan: catatan,
+    );
     if (ok) _snack('Laporan terverifikasi', StatusLaporan.diverifikasi.color);
   }
 
@@ -138,8 +163,11 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
       wajib: true,
     );
     if (alasan == null) return;
-    final ok =
-        widget.provider.tolak(_laporan.id, oleh: _user.nama, alasan: alasan);
+    final ok = widget.provider.tolak(
+      _laporan.id,
+      oleh: _user.nama,
+      alasan: alasan,
+    );
     if (ok) _snack('Laporan ditolak', StatusLaporan.ditolak.color);
   }
 
@@ -174,8 +202,11 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
       warna: StatusLaporan.diproses.color,
     );
     if (catatan == null) return;
-    final ok = widget.provider
-        .mulaiKerja(_laporan.id, oleh: _user.nama, catatan: catatan);
+    final ok = widget.provider.mulaiKerja(
+      _laporan.id,
+      oleh: _user.nama,
+      catatan: catatan,
+    );
     if (ok) _snack('Pengerjaan dimulai', StatusLaporan.diproses.color);
   }
 
@@ -186,8 +217,14 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
     final yakin = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Tandai Selesai'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          'Tandai Selesai',
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            color: AppColors.deepForest,
+          ),
+        ),
         // Lebar eksplisit: FotoPickerField berisi ListView horizontal yang
         // tidak mendukung intrinsic width, sehingga tanpa ini AlertDialog
         // gagal dirender (layar hanya tampak redup).
@@ -204,15 +241,19 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
                   decoration: InputDecoration(
                     hintText: 'Yang sudah dikerjakan...',
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     contentPadding: const EdgeInsets.all(12),
                   ),
                 ),
                 const SizedBox(height: 14),
-                Text(
+                const Text(
                   'Foto sesudah penanganan (opsional)',
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.deepForest,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 FotoPickerField(onChanged: (f) => fotoSesudah = f),
@@ -230,6 +271,9 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
             style: ElevatedButton.styleFrom(
               backgroundColor: StatusLaporan.selesai.color,
               foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
             child: const Text('Selesai'),
           ),
@@ -257,7 +301,13 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
         onPressed: onTap,
         icon: Icon(ikon, size: 18),
         label: Text(label),
-        style: FilledButton.styleFrom(backgroundColor: warna),
+        style: FilledButton.styleFrom(
+          backgroundColor: warna,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        ),
       );
     }
 
@@ -265,26 +315,65 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
       return OutlinedButton.icon(
         onPressed: onTap,
         icon: Icon(ikon, size: 18, color: warna),
-        label: Text(label, style: TextStyle(color: warna)),
-        style: OutlinedButton.styleFrom(side: BorderSide(color: warna)),
+        label: Text(
+          label,
+          style: TextStyle(color: warna, fontWeight: FontWeight.w600),
+        ),
+        style: OutlinedButton.styleFrom(
+          side: BorderSide(color: warna.withValues(alpha: 0.6), width: 1.2),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        ),
       );
     }
 
     if (_user.peran.isAdmin) {
       switch (l.status) {
         case StatusLaporan.menunggu:
-          hasil.add(isi('Verifikasi', StatusLaporan.diverifikasi.icon,
-              StatusLaporan.diverifikasi.color, _verifikasi));
-          hasil.add(garis('Tolak', StatusLaporan.ditolak.icon,
-              StatusLaporan.ditolak.color, _tolak));
+          hasil.add(
+            isi(
+              'Verifikasi',
+              StatusLaporan.diverifikasi.icon,
+              StatusLaporan.diverifikasi.color,
+              _verifikasi,
+            ),
+          );
+          hasil.add(
+            garis(
+              'Tolak',
+              StatusLaporan.ditolak.icon,
+              StatusLaporan.ditolak.color,
+              _tolak,
+            ),
+          );
         case StatusLaporan.diverifikasi:
-          hasil.add(isi('Tugaskan Teknisi', StatusLaporan.ditugaskan.icon,
-              StatusLaporan.ditugaskan.color, _tugaskan));
-          hasil.add(garis('Tolak', StatusLaporan.ditolak.icon,
-              StatusLaporan.ditolak.color, _tolak));
+          hasil.add(
+            isi(
+              'Tugaskan Teknisi',
+              StatusLaporan.ditugaskan.icon,
+              StatusLaporan.ditugaskan.color,
+              _tugaskan,
+            ),
+          );
+          hasil.add(
+            garis(
+              'Tolak',
+              StatusLaporan.ditolak.icon,
+              StatusLaporan.ditolak.color,
+              _tolak,
+            ),
+          );
         case StatusLaporan.ditugaskan:
-          hasil.add(garis('Ganti Teknisi', Icons.swap_horiz_rounded,
-              StatusLaporan.ditugaskan.color, _tugaskan));
+          hasil.add(
+            garis(
+              'Ganti Teknisi',
+              Icons.swap_horiz_rounded,
+              StatusLaporan.ditugaskan.color,
+              _tugaskan,
+            ),
+          );
         case StatusLaporan.diproses:
         case StatusLaporan.selesai:
         case StatusLaporan.ditolak:
@@ -293,11 +382,23 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
     } else if (_user.peran.isTeknisi && l.teknisiId == _user.uid) {
       switch (l.status) {
         case StatusLaporan.ditugaskan:
-          hasil.add(isi('Mulai Pengerjaan', StatusLaporan.diproses.icon,
-              StatusLaporan.diproses.color, _mulaiKerja));
+          hasil.add(
+            isi(
+              'Mulai Pengerjaan',
+              StatusLaporan.diproses.icon,
+              StatusLaporan.diproses.color,
+              _mulaiKerja,
+            ),
+          );
         case StatusLaporan.diproses:
-          hasil.add(isi('Tandai Selesai', StatusLaporan.selesai.icon,
-              StatusLaporan.selesai.color, _selesaikan));
+          hasil.add(
+            isi(
+              'Tandai Selesai',
+              StatusLaporan.selesai.icon,
+              StatusLaporan.selesai.color,
+              _selesaikan,
+            ),
+          );
         case StatusLaporan.menunggu:
         case StatusLaporan.diverifikasi:
         case StatusLaporan.selesai:
@@ -318,17 +419,18 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
   }
 
   Widget _buildContent(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
     return Scaffold(
-      backgroundColor: const Color(0xFFF1F5F9),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Text(
           _laporan.id,
           style: const TextStyle(
-              fontWeight: FontWeight.bold, fontFamily: 'monospace'),
+            fontWeight: FontWeight.w700,
+            fontFamily: 'monospace',
+            letterSpacing: 0.5,
+          ),
         ),
-        backgroundColor: scheme.primary,
+        backgroundColor: AppColors.forestGreen,
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
@@ -340,29 +442,44 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
             Container(
               padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
               decoration: BoxDecoration(
-                color: _laporan.status.color.withValues(alpha: 0.1),
+                color: _laporan.status.backgroundColor,
                 border: Border.all(
-                    color: _laporan.status.color.withValues(alpha: 0.4)),
-                borderRadius: BorderRadius.circular(14),
+                  color: _laporan.status.color.withValues(alpha: 0.3),
+                  width: 1,
+                ),
+                borderRadius: BorderRadius.circular(16),
               ),
               child: Row(
                 children: [
-                  Icon(_laporan.status.icon,
-                      color: _laporan.status.color, size: 28),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      _laporan.status.icon,
+                      color: _laporan.status.color,
+                      size: 24,
+                    ),
+                  ),
                   const SizedBox(width: 12),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      const Text(
                         'Status Laporan',
                         style: TextStyle(
-                            fontSize: 12, color: Colors.grey.shade600),
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.textSecondary,
+                        ),
                       ),
                       Text(
                         _laporan.status.label,
                         style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 17,
                           color: _laporan.status.color,
                         ),
                       ),
@@ -371,25 +488,30 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
                   const Spacer(),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 5),
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
                     decoration: BoxDecoration(
-                      color: _laporan.prioritas.color.withValues(alpha: 0.1),
+                      color: _laporan.prioritas.backgroundColor,
                       border: Border.all(
-                          color:
-                              _laporan.prioritas.color.withValues(alpha: 0.4)),
-                      borderRadius: BorderRadius.circular(8),
+                        color: _laporan.prioritas.color.withValues(alpha: 0.3),
+                      ),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.flag_rounded,
-                            size: 14, color: _laporan.prioritas.color),
+                        Icon(
+                          Icons.flag_rounded,
+                          size: 14,
+                          color: _laporan.prioritas.color,
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           _laporan.prioritas.label,
                           style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w700,
                             color: _laporan.prioritas.color,
                           ),
                         ),
@@ -449,24 +571,29 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
 
             // Deskripsi
             Card(
-              elevation: 1.5,
+              elevation: 0,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14)),
+                borderRadius: BorderRadius.circular(16),
+                side: const BorderSide(color: AppColors.borderSubtle, width: 1),
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
+                    const Row(
                       children: [
-                        Icon(Icons.description_outlined,
-                            size: 18, color: scheme.primary),
-                        const SizedBox(width: 8),
+                        Icon(
+                          Icons.description_outlined,
+                          size: 18,
+                          color: AppColors.forestGreen,
+                        ),
+                        SizedBox(width: 8),
                         Text(
                           'Deskripsi Kerusakan',
                           style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: scheme.primary,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.deepForest,
                             fontSize: 14,
                           ),
                         ),
@@ -475,10 +602,11 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
                     const SizedBox(height: 10),
                     Text(
                       _laporan.deskripsi,
-                      style: TextStyle(
-                          color: Colors.grey.shade700,
-                          fontSize: 13,
-                          height: 1.5),
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 13,
+                        height: 1.5,
+                      ),
                     ),
                   ],
                 ),
@@ -510,25 +638,33 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
                 _laporan.catatanAdmin!.isNotEmpty) ...[
               const SizedBox(height: 12),
               Card(
-                elevation: 1.5,
+                elevation: 0,
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14)),
-                color: const Color(0xFF10B981).withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(
+                    color: AppColors.sageGreen.withValues(alpha: 0.35),
+                    width: 1,
+                  ),
+                ),
+                color: AppColors.surfaceContainerLow,
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
+                      const Row(
                         children: [
-                          const Icon(Icons.comment_outlined,
-                              size: 18, color: Color(0xFF10B981)),
-                          const SizedBox(width: 8),
-                          const Text(
+                          Icon(
+                            Icons.comment_outlined,
+                            size: 18,
+                            color: AppColors.forestGreen,
+                          ),
+                          SizedBox(width: 8),
+                          Text(
                             'Catatan Penanganan',
                             style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF10B981),
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.deepForest,
                               fontSize: 14,
                             ),
                           ),
@@ -537,10 +673,11 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
                       const SizedBox(height: 10),
                       Text(
                         _laporan.catatanAdmin!,
-                        style: TextStyle(
-                            color: Colors.grey.shade700,
-                            fontSize: 13,
-                            height: 1.5),
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 13,
+                          height: 1.5,
+                        ),
                       ),
                     ],
                   ),
@@ -560,10 +697,7 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
 
             // Tindakan sesuai peran
             if (!_user.peran.isPelapor)
-              _PanelAksi(
-                peran: _user.peran,
-                tombol: _tombolAksi(),
-              ),
+              _PanelAksi(peran: _user.peran, tombol: _tombolAksi()),
             const SizedBox(height: 40),
           ],
         ),
@@ -581,8 +715,19 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
 
   String _formatTanggalLengkap(DateTime date) {
     final bulan = [
-      '', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-      'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
+      '',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'Mei',
+      'Jun',
+      'Jul',
+      'Agu',
+      'Sep',
+      'Okt',
+      'Nov',
+      'Des',
     ];
     return '${date.day} ${bulan[date.month]} ${date.year}, ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
   }
@@ -596,11 +741,12 @@ class _PanelAksi extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
     return Card(
-      elevation: 1.5,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppColors.borderSubtle, width: 1),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -608,13 +754,13 @@ class _PanelAksi extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(peran.icon, size: 18, color: scheme.primary),
+                Icon(peran.icon, size: 18, color: AppColors.forestGreen),
                 const SizedBox(width: 8),
                 Text(
                   'Tindakan ${peran.label}',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: scheme.primary,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.deepForest,
                     fontSize: 14,
                   ),
                 ),
@@ -622,9 +768,9 @@ class _PanelAksi extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             if (tombol.isEmpty)
-              Text(
+              const Text(
                 'Tidak ada tindakan yang tersedia untuk laporan ini.',
-                style: TextStyle(fontSize: 12.5, color: Colors.grey.shade600),
+                style: TextStyle(fontSize: 12.5, color: AppColors.textMuted),
               )
             else
               Wrap(spacing: 10, runSpacing: 10, children: tombol),
@@ -699,11 +845,15 @@ class _DialogTugaskanState extends State<_DialogTugaskan> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
     return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: Text(widget.ganti ? 'Ganti Teknisi' : 'Tugaskan Teknisi'),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: Text(
+        widget.ganti ? 'Ganti Teknisi' : 'Tugaskan Teknisi',
+        style: const TextStyle(
+          fontWeight: FontWeight.w700,
+          color: AppColors.deepForest,
+        ),
+      ),
       content: SizedBox(
         width: double.maxFinite,
         child: FutureBuilder<List<_Teknisi>>(
@@ -722,13 +872,14 @@ class _DialogTugaskanState extends State<_DialogTugaskan> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (daftar.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 12),
                       child: Text(
-                        'Belum ada akun teknisi. Tambahkan lewat tab '
-                        '"Teknisi" di menu admin.',
+                        'Belum ada akun teknisi. Tambahkan lewat tab "Teknisi" di menu admin.',
                         style: TextStyle(
-                            fontSize: 13, color: Colors.grey.shade600),
+                          fontSize: 13,
+                          color: AppColors.textSecondary,
+                        ),
                       ),
                     ),
                   for (final t in daftar)
@@ -736,11 +887,24 @@ class _DialogTugaskanState extends State<_DialogTugaskan> {
                       dense: true,
                       contentPadding: EdgeInsets.zero,
                       selected: _terpilih?.id == t.id,
-                      selectedColor: scheme.primary,
-                      leading: Icon(_terpilih?.id == t.id
-                          ? Icons.radio_button_checked
-                          : Icons.radio_button_off),
-                      title: Text(t.nama),
+                      selectedColor: AppColors.forestGreen,
+                      leading: Icon(
+                        _terpilih?.id == t.id
+                            ? Icons.radio_button_checked
+                            : Icons.radio_button_off,
+                        color: _terpilih?.id == t.id
+                            ? AppColors.forestGreen
+                            : AppColors.textMuted,
+                      ),
+                      title: Text(
+                        t.nama,
+                        style: TextStyle(
+                          fontWeight: _terpilih?.id == t.id
+                              ? FontWeight.w700
+                              : FontWeight.w500,
+                          color: AppColors.deepForest,
+                        ),
+                      ),
                       onTap: () => setState(() => _terpilih = t),
                     ),
                   const SizedBox(height: 8),
@@ -750,7 +914,7 @@ class _DialogTugaskanState extends State<_DialogTugaskan> {
                     decoration: InputDecoration(
                       hintText: 'Catatan untuk teknisi (opsional)...',
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       contentPadding: const EdgeInsets.all(12),
                     ),
@@ -770,12 +934,19 @@ class _DialogTugaskanState extends State<_DialogTugaskan> {
           onPressed: _terpilih == null
               ? null
               : () => Navigator.of(context).pop(
-                    _HasilTugas(
-                      _terpilih!.id,
-                      _terpilih!.nama,
-                      _catatan.text.trim().isEmpty ? null : _catatan.text,
-                    ),
+                  _HasilTugas(
+                    _terpilih!.id,
+                    _terpilih!.nama,
+                    _catatan.text.trim().isEmpty ? null : _catatan.text,
                   ),
+                ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.forestGreen,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
           child: const Text('Tugaskan'),
         ),
       ],
@@ -796,11 +967,12 @@ class _FotoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
     return Card(
-      elevation: 1.5,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppColors.borderSubtle, width: 1),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -808,14 +980,17 @@ class _FotoCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Icons.photo_library_outlined,
-                    size: 18, color: scheme.primary),
+                const Icon(
+                  Icons.photo_library_outlined,
+                  size: 18,
+                  color: AppColors.forestGreen,
+                ),
                 const SizedBox(width: 8),
                 Text(
                   '$judul (${foto.length})',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: scheme.primary,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.deepForest,
                     fontSize: 14,
                   ),
                 ),
@@ -827,16 +1002,22 @@ class _FotoCard extends StatelessWidget {
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: foto.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 10),
+                separatorBuilder: (_, _) => const SizedBox(width: 10),
                 itemBuilder: (context, i) => GestureDetector(
                   onTap: () => onTap(i),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.memory(
-                      foto[i],
-                      width: 96,
-                      height: 96,
-                      fit: BoxFit.cover,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppColors.borderSubtle),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(13),
+                      child: Image.memory(
+                        foto[i],
+                        width: 96,
+                        height: 96,
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   ),
                 ),
@@ -858,26 +1039,32 @@ class _StatusTimeline extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final items = riwayat.reversed.toList();
 
     return Card(
-      elevation: 1.5,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppColors.borderSubtle, width: 1),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
+            const Row(
               children: [
-                Icon(Icons.timeline_rounded, size: 18, color: scheme.primary),
-                const SizedBox(width: 8),
+                Icon(
+                  Icons.timeline_rounded,
+                  size: 18,
+                  color: AppColors.forestGreen,
+                ),
+                SizedBox(width: 8),
                 Text(
                   'Riwayat Status',
                   style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: scheme.primary,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.deepForest,
                     fontSize: 14,
                   ),
                 ),
@@ -928,7 +1115,7 @@ class _TimelineItem extends StatelessWidget {
                   width: 28,
                   height: 28,
                   decoration: BoxDecoration(
-                    color: isLatest ? color : color.withValues(alpha: 0.15),
+                    color: isLatest ? color : item.status.backgroundColor,
                     shape: BoxShape.circle,
                     border: Border.all(color: color, width: 1.5),
                   ),
@@ -940,7 +1127,7 @@ class _TimelineItem extends StatelessWidget {
                 ),
                 if (!isLast)
                   Expanded(
-                    child: Container(width: 2, color: Colors.grey.shade300),
+                    child: Container(width: 2, color: AppColors.borderSubtle),
                   ),
               ],
             ),
@@ -955,7 +1142,7 @@ class _TimelineItem extends StatelessWidget {
                   Text(
                     item.status.label,
                     style: TextStyle(
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w800,
                       fontSize: 14,
                       color: color,
                     ),
@@ -963,24 +1150,30 @@ class _TimelineItem extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     '${formatWaktu(item.waktu)} \u2022 ${item.oleh}',
-                    style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: AppColors.textMuted,
+                    ),
                   ),
                   if (catatan != null && catatan.isNotEmpty) ...[
                     const SizedBox(height: 6),
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 8),
+                        horizontal: 10,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(8),
+                        color: AppColors.surfaceContainerLow,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppColors.borderSubtle),
                       ),
                       child: Text(
                         catatan,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 12,
                           height: 1.4,
-                          color: Colors.grey.shade700,
+                          color: AppColors.textSecondary,
                         ),
                       ),
                     ),
@@ -1003,10 +1196,12 @@ class _InfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     return Card(
-      elevation: 1.5,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppColors.borderSubtle, width: 1),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -1014,14 +1209,17 @@ class _InfoCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Icons.info_outline_rounded,
-                    size: 18, color: scheme.primary),
+                const Icon(
+                  Icons.info_outline_rounded,
+                  size: 18,
+                  color: AppColors.forestGreen,
+                ),
                 const SizedBox(width: 8),
                 Text(
                   title,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: scheme.primary,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.deepForest,
                     fontSize: 14,
                   ),
                 ),
@@ -1056,26 +1254,29 @@ class _InfoRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 15, color: Colors.grey.shade500),
+          Icon(icon, size: 15, color: AppColors.sageGreen),
           const SizedBox(width: 8),
           SizedBox(
             width: 72,
             child: Text(
               label,
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppColors.textSecondary,
+              ),
             ),
           ),
           const Text(
             ': ',
-            style: TextStyle(fontSize: 12, color: Colors.grey),
+            style: TextStyle(fontSize: 12, color: AppColors.textMuted),
           ),
           Expanded(
             child: Text(
               value,
               style: TextStyle(
                 fontSize: 13,
-                fontWeight: isBold ? FontWeight.w600 : FontWeight.normal,
-                color: Colors.grey.shade800,
+                fontWeight: isBold ? FontWeight.w700 : FontWeight.w500,
+                color: AppColors.deepForest,
               ),
             ),
           ),

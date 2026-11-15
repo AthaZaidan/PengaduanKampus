@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+
 import '../../models/app_user.dart';
 import '../../models/laporan.dart';
 import '../../providers/laporan_provider.dart';
+import '../../theme/app_theme.dart';
 import '../../widgets/sla_chip.dart';
 import '../shared/detail_laporan_page.dart';
 import '../shared/notifikasi_page.dart';
@@ -30,7 +32,6 @@ class AdminDashboardPage extends StatelessWidget {
   }
 
   Widget _buildContent(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final semua = provider.untuk(user);
 
     int hitung(StatusLaporan s) => semua.where((l) => l.status == s).length;
@@ -41,28 +42,31 @@ class AdminDashboardPage extends StatelessWidget {
     final lewatSla = semua.where((l) => l.aktif && l.melewatiSla).length;
 
     // Antrian: laporan yang butuh tindakan admin, prioritas tinggi & terlama dulu.
-    final antrian = semua
-        .where((l) =>
-            l.status == StatusLaporan.menunggu ||
-            l.status == StatusLaporan.diverifikasi)
-        .toList()
-      ..sort((a, b) {
-        final p = b.prioritas.index.compareTo(a.prioritas.index);
-        return p != 0 ? p : a.tanggalLapor.compareTo(b.tanggalLapor);
-      });
+    final antrian =
+        semua
+            .where(
+              (l) =>
+                  l.status == StatusLaporan.menunggu ||
+                  l.status == StatusLaporan.diverifikasi,
+            )
+            .toList()
+          ..sort((a, b) {
+            final p = b.prioritas.index.compareTo(a.prioritas.index);
+            return p != 0 ? p : a.tanggalLapor.compareTo(b.tanggalLapor);
+          });
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF1F5F9),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text(
-          'Beranda Admin',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          'Beranda Admin Fasilitas',
+          style: TextStyle(fontWeight: FontWeight.w700),
         ),
-        backgroundColor: scheme.primary,
+        backgroundColor: AppColors.forestGreen,
         foregroundColor: Colors.white,
         actions: [
           IconButton(
-            icon: const Icon(Icons.notifications_outlined),
+            icon: const Icon(Icons.notifications_outlined, color: Colors.white),
             tooltip: 'Notifikasi',
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute(
@@ -75,22 +79,36 @@ class AdminDashboardPage extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          // Header Card with Deep Forest & Forest Green Gradient
           Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              gradient: LinearGradient(
-                colors: [
-                  scheme.primary,
-                  Color.alphaBlend(
-                      Colors.black.withValues(alpha: 0.3), scheme.primary),
-                ],
+              borderRadius: BorderRadius.circular(18),
+              gradient: const LinearGradient(
+                colors: [AppColors.deepForest, AppColors.forestGreen],
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.deepForest.withValues(alpha: 0.12),
+                  blurRadius: 14,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: Row(
               children: [
-                const Icon(Icons.admin_panel_settings_rounded,
-                    color: Colors.white, size: 36),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.18),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.admin_panel_settings_rounded,
+                    color: Colors.white,
+                    size: 32,
+                  ),
+                ),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
@@ -103,16 +121,16 @@ class AdminDashboardPage extends StatelessWidget {
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 17,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
-                      const SizedBox(height: 2),
+                      const SizedBox(height: 3),
                       Text(
                         perluVerifikasi + perluDitugaskan == 0
-                            ? 'Tidak ada laporan yang menunggu tindakan.'
-                            : '${perluVerifikasi + perluDitugaskan} laporan menunggu tindakan Anda.',
+                            ? 'Semua laporan sudah tertangani dengan baik.'
+                            : '${perluVerifikasi + perluDitugaskan} laporan butuh penanganan segera.',
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.9),
+                          color: Colors.white.withValues(alpha: 0.88),
                           fontSize: 12.5,
                         ),
                       ),
@@ -122,7 +140,9 @@ class AdminDashboardPage extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
+
+          // 2x2 Antrian Cards
           Row(
             children: [
               Expanded(
@@ -131,6 +151,7 @@ class AdminDashboardPage extends StatelessWidget {
                   label: 'Perlu Verifikasi',
                   ikon: StatusLaporan.menunggu.icon,
                   warna: StatusLaporan.menunggu.color,
+                  latar: StatusLaporan.menunggu.backgroundColor,
                 ),
               ),
               const SizedBox(width: 10),
@@ -140,6 +161,7 @@ class AdminDashboardPage extends StatelessWidget {
                   label: 'Perlu Ditugaskan',
                   ikon: StatusLaporan.diverifikasi.icon,
                   warna: StatusLaporan.diverifikasi.color,
+                  latar: StatusLaporan.diverifikasi.backgroundColor,
                 ),
               ),
             ],
@@ -153,48 +175,86 @@ class AdminDashboardPage extends StatelessWidget {
                   label: 'Sedang Ditangani',
                   ikon: StatusLaporan.diproses.icon,
                   warna: StatusLaporan.diproses.color,
+                  latar: StatusLaporan.diproses.backgroundColor,
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: _Antrian(
                   nilai: lewatSla,
-                  label: 'Lewat SLA',
+                  label: 'Lewat Batas SLA',
                   ikon: Icons.timer_off_outlined,
-                  warna: const Color(0xFFEF4444),
+                  warna: AppColors.statusDitolak,
+                  latar: AppColors.statusDitolakBg,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 22),
+
+          // Header Section Perlu Tindakan
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                'Perlu Tindakan',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                'Perlu Tindakan Cepat',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.deepForest,
+                ),
               ),
               TextButton(
                 onPressed: onLihatSemua,
-                child: const Text('Semua Laporan'),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.forestGreen,
+                ),
+                child: const Row(
+                  children: [
+                    Text(
+                      'Semua Laporan',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    SizedBox(width: 2),
+                    Icon(Icons.arrow_forward_rounded, size: 16),
+                  ],
+                ),
               ),
             ],
           ),
+          const SizedBox(height: 8),
+
           if (antrian.isEmpty)
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  children: [
-                    Icon(Icons.task_alt_rounded,
-                        size: 44, color: Colors.grey.shade400),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Semua laporan sudah ditindaklanjuti.',
-                      style: TextStyle(color: Colors.grey.shade600),
+            Container(
+              padding: const EdgeInsets.all(28),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.borderSubtle),
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.softSage.withValues(alpha: 0.4),
+                      shape: BoxShape.circle,
                     ),
-                  ],
-                ),
+                    child: const Icon(
+                      Icons.task_alt_rounded,
+                      size: 38,
+                      color: AppColors.forestGreen,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    'Semua laporan sudah ditindaklanjuti',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.deepForest,
+                    ),
+                  ),
+                ],
               ),
             )
           else
@@ -211,6 +271,7 @@ class AdminDashboardPage extends StatelessWidget {
                   ),
                 ),
               ),
+          const SizedBox(height: 40),
         ],
       ),
     );
@@ -222,58 +283,71 @@ class _Antrian extends StatelessWidget {
   final String label;
   final IconData ikon;
   final Color warna;
+  final Color latar;
 
   const _Antrian({
     required this.nilai,
     required this.label,
     required this.ikon,
     required this.warna,
+    required this.latar,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 1.5,
-      margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: warna.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(ikon, color: warna, size: 22),
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.borderSubtle, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.deepForest.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(14),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: latar,
+              borderRadius: BorderRadius.circular(12),
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '$nilai',
-                    style: const TextStyle(
-                        fontSize: 20, fontWeight: FontWeight.bold),
+            child: Icon(ikon, color: warna, size: 22),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '$nilai',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.deepForest,
                   ),
-                  Text(
-                    label,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.grey.shade600,
-                      height: 1.2,
-                    ),
+                ),
+                Text(
+                  label,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.textSecondary,
+                    height: 1.2,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -293,21 +367,30 @@ class _BarisAntrian extends StatelessWidget {
 
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
-      elevation: 1.5,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppColors.borderSubtle, width: 1),
+      ),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Row(
             children: [
-              CircleAvatar(
-                radius: 20,
-                backgroundColor:
-                    laporan.status.color.withValues(alpha: 0.15),
-                child: Icon(laporan.status.icon,
-                    color: laporan.status.color, size: 20),
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: laporan.status.backgroundColor,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  laporan.status.icon,
+                  color: laporan.status.color,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -319,34 +402,47 @@ class _BarisAntrian extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                          fontWeight: FontWeight.w600, fontSize: 14),
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                        color: AppColors.deepForest,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       '$aksi \u2022 ${laporan.lokasi}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style:
-                          TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                     const SizedBox(height: 6),
                     Wrap(
                       spacing: 8,
+                      runSpacing: 4,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 1),
+                            horizontal: 7,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
-                            color:
-                                laporan.prioritas.color.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(6),
+                            color: laporan.prioritas.backgroundColor,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: laporan.prioritas.color.withValues(
+                                alpha: 0.3,
+                              ),
+                              width: 0.8,
+                            ),
                           ),
                           child: Text(
                             laporan.prioritas.label,
                             style: TextStyle(
                               fontSize: 10,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: FontWeight.w700,
                               color: laporan.prioritas.color,
                             ),
                           ),
@@ -357,7 +453,10 @@ class _BarisAntrian extends StatelessWidget {
                   ],
                 ),
               ),
-              Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: AppColors.textMuted,
+              ),
             ],
           ),
         ),

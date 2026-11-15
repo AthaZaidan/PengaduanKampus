@@ -69,10 +69,12 @@ class StatistikLaporan {
     for (var i = 6; i >= 0; i--) {
       final hari = DateTime(hariIni.year, hariIni.month, hariIni.day - i);
       final jumlah = daftar
-          .where((l) =>
-              l.tanggalLapor.year == hari.year &&
-              l.tanggalLapor.month == hari.month &&
-              l.tanggalLapor.day == hari.day)
+          .where(
+            (l) =>
+                l.tanggalLapor.year == hari.year &&
+                l.tanggalLapor.month == hari.month &&
+                l.tanggalLapor.day == hari.day,
+          )
           .length;
       tujuhHari.add(MapEntry(hari, jumlah));
     }

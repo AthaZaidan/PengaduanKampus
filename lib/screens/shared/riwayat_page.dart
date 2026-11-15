@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+
 import '../../models/app_user.dart';
 import '../../models/laporan.dart';
 import '../../providers/laporan_provider.dart';
+import '../../theme/app_theme.dart';
 import '../../widgets/sla_chip.dart';
 import 'detail_laporan_page.dart';
 
@@ -67,7 +69,6 @@ class _RiwayatPageState extends State<RiwayatPage>
 
   @override
   Widget build(BuildContext context) {
-    // Rebuild otomatis setiap provider memanggil notifyListeners().
     return ListenableBuilder(
       listenable: widget.provider,
       builder: (context, _) => _buildContent(context),
@@ -75,23 +76,23 @@ class _RiwayatPageState extends State<RiwayatPage>
   }
 
   Widget _buildContent(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final sumber = widget.provider.untuk(widget.user);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF1F5F9),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Text(
           widget.judul,
-          style: const TextStyle(fontWeight: FontWeight.bold),
+          style: const TextStyle(fontWeight: FontWeight.w700),
         ),
-        backgroundColor: scheme.primary,
+        backgroundColor: AppColors.forestGreen,
         foregroundColor: Colors.white,
         bottom: TabBar(
           controller: _tabController,
           labelColor: Colors.white,
-          unselectedLabelColor: Colors.white60,
+          unselectedLabelColor: Colors.white70,
           indicatorColor: Colors.white,
+          indicatorWeight: 3,
           isScrollable: true,
           tabAlignment: TabAlignment.start,
           tabs: [
@@ -103,16 +104,27 @@ class _RiwayatPageState extends State<RiwayatPage>
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Cari laporan...',
-                hintStyle: TextStyle(color: Colors.grey.shade400),
-                prefixIcon: const Icon(Icons.search_rounded),
+                hintText: 'Cari berdasarkan judul, lokasi, atau ID...',
+                hintStyle: const TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 13,
+                ),
+                prefixIcon: const Icon(
+                  Icons.search_rounded,
+                  color: AppColors.sageGreen,
+                  size: 22,
+                ),
                 suffixIcon: _query.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(Icons.close_rounded),
+                        icon: const Icon(
+                          Icons.close_rounded,
+                          color: AppColors.textMuted,
+                          size: 18,
+                        ),
                         onPressed: () {
                           _searchController.clear();
                           setState(() => _query = '');
@@ -122,10 +134,23 @@ class _RiwayatPageState extends State<RiwayatPage>
                 filled: true,
                 fillColor: Colors.white,
                 contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 12),
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: AppColors.borderSubtle),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: AppColors.borderSubtle),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(
+                    color: AppColors.forestGreen,
+                    width: 1.5,
+                  ),
                 ),
               ),
               onChanged: (v) => setState(() => _query = v),
@@ -156,18 +181,18 @@ class _RiwayatPageState extends State<RiwayatPage>
           Text(label),
           const SizedBox(width: 6),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
             decoration: BoxDecoration(
               color: color != null
-                  ? color.withValues(alpha: 0.25)
-                  : Colors.white24,
+                  ? color.withValues(alpha: 0.3)
+                  : Colors.white.withValues(alpha: 0.22),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Text(
               '$count',
               style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
+                fontSize: 10.5,
+                fontWeight: FontWeight.w700,
                 color: color ?? Colors.white,
               ),
             ),
@@ -193,17 +218,42 @@ class _LaporanList extends StatelessWidget {
   Widget build(BuildContext context) {
     if (list.isEmpty) {
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.folder_open_outlined,
-                size: 64, color: Colors.grey.shade300),
-            const SizedBox(height: 12),
-            Text(
-              'Tidak ada laporan',
-              style: TextStyle(color: Colors.grey.shade500, fontSize: 14),
-            ),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.softSage.withValues(alpha: 0.35),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.folder_open_outlined,
+                  size: 44,
+                  color: AppColors.sageGreen,
+                ),
+              ),
+              const SizedBox(height: 14),
+              const Text(
+                'Tidak Ada Laporan',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.deepForest,
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Belum ada laporan yang sesuai dengan kategori ini.',
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 12.5,
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -246,15 +296,16 @@ class _RiwayatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
-      elevation: 1.5,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppColors.borderSubtle, width: 1),
+      ),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Row(
@@ -262,11 +313,14 @@ class _RiwayatCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: scheme.primary.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(10),
+                  color: AppColors.softSage.withValues(alpha: 0.45),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(laporan.kategori.icon,
-                    size: 22, color: scheme.primary),
+                child: Icon(
+                  laporan.kategori.icon,
+                  size: 22,
+                  color: AppColors.forestGreen,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -276,8 +330,9 @@ class _RiwayatCard extends StatelessWidget {
                     Text(
                       laporan.judul,
                       style: const TextStyle(
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w700,
                         fontSize: 14,
+                        color: AppColors.deepForest,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -285,67 +340,86 @@ class _RiwayatCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        Icon(Icons.location_on_outlined,
-                            size: 12, color: Colors.grey.shade500),
+                        const Icon(
+                          Icons.location_on_outlined,
+                          size: 13,
+                          color: AppColors.textMuted,
+                        ),
                         const SizedBox(width: 2),
                         Expanded(
                           child: Text(
                             laporan.lokasi,
-                            style: TextStyle(
-                                fontSize: 11, color: Colors.grey.shade500),
+                            style: const TextStyle(
+                              fontSize: 11.5,
+                              color: AppColors.textSecondary,
+                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
                     Row(
                       children: [
                         Text(
                           laporan.id,
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 11,
-                            color: Colors.grey.shade400,
+                            color: AppColors.textMuted,
                             fontFamily: 'monospace',
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                         const SizedBox(width: 8),
                         Container(
                           width: 3,
                           height: 3,
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade400,
+                          decoration: const BoxDecoration(
+                            color: AppColors.textMuted,
                             shape: BoxShape.circle,
                           ),
                         ),
                         const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 1),
+                            horizontal: 6,
+                            vertical: 1.5,
+                          ),
                           decoration: BoxDecoration(
-                            color: laporan.prioritas.color
-                                .withValues(alpha: 0.15),
+                            color: laporan.prioritas.backgroundColor,
                             borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: laporan.prioritas.color.withValues(
+                                alpha: 0.25,
+                              ),
+                              width: 0.8,
+                            ),
                           ),
                           child: Text(
                             laporan.prioritas.label,
                             style: TextStyle(
                               fontSize: 10,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: FontWeight.w700,
                               color: laporan.prioritas.color,
                             ),
                           ),
                         ),
                         if (laporan.foto.isNotEmpty) ...[
                           const SizedBox(width: 8),
-                          Icon(Icons.photo_camera_outlined,
-                              size: 12, color: Colors.grey.shade500),
+                          const Icon(
+                            Icons.photo_camera_outlined,
+                            size: 12,
+                            color: AppColors.textMuted,
+                          ),
                           const SizedBox(width: 2),
                           Text(
                             '${laporan.foto.length}',
-                            style: TextStyle(
-                                fontSize: 11, color: Colors.grey.shade500),
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppColors.textMuted,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ],
                       ],
@@ -361,14 +435,19 @@ class _RiwayatCard extends StatelessWidget {
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.engineering_outlined,
-                                    size: 12, color: Colors.grey.shade500),
+                                const Icon(
+                                  Icons.engineering_outlined,
+                                  size: 13,
+                                  color: AppColors.sageGreen,
+                                ),
                                 const SizedBox(width: 3),
                                 Text(
                                   laporan.teknisiNama!,
-                                  style: TextStyle(
-                                      fontSize: 11,
-                                      color: Colors.grey.shade600),
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.deepForest,
+                                  ),
                                 ),
                               ],
                             ),
@@ -384,32 +463,44 @@ class _RiwayatCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
-                      color: laporan.status.color.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(20),
+                      color: laporan.status.backgroundColor,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: laporan.status.color.withValues(alpha: 0.25),
+                        width: 0.8,
+                      ),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(laporan.status.icon,
-                            size: 11, color: laporan.status.color),
+                        Icon(
+                          laporan.status.icon,
+                          size: 11,
+                          color: laporan.status.color,
+                        ),
                         const SizedBox(width: 3),
                         Text(
                           laporan.status.label,
                           style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w700,
                             color: laporan.status.color,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 6),
-                  const Icon(Icons.chevron_right_rounded,
-                      color: Colors.grey, size: 18),
+                  const SizedBox(height: 8),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    color: AppColors.textMuted,
+                    size: 18,
+                  ),
                 ],
               ),
             ],

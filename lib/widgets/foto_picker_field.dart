@@ -2,6 +2,8 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+
+import '../theme/app_theme.dart';
 import 'foto_viewer.dart';
 
 /// Kotak pemilih foto (kamera / galeri) yang berdiri sendiri.
@@ -10,11 +12,7 @@ class FotoPickerField extends StatefulWidget {
   final int maxFoto;
   final ValueChanged<List<Uint8List>> onChanged;
 
-  const FotoPickerField({
-    super.key,
-    required this.onChanged,
-    this.maxFoto = 3,
-  });
+  const FotoPickerField({super.key, required this.onChanged, this.maxFoto = 3});
 
   @override
   State<FotoPickerField> createState() => _FotoPickerFieldState();
@@ -30,31 +28,90 @@ class _FotoPickerFieldState extends State<FotoPickerField> {
     showModalBottomSheet<void>(
       context: context,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 8),
-            ListTile(
-              leading: const Icon(Icons.photo_camera_outlined),
-              title: const Text('Ambil dari Kamera'),
-              onTap: () {
-                Navigator.of(ctx).pop();
-                _ambil(ImageSource.camera);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('Pilih dari Galeri'),
-              onTap: () {
-                Navigator.of(ctx).pop();
-                _ambil(ImageSource.gallery);
-              },
-            ),
-            const SizedBox(height: 8),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: AppColors.borderMedium,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              const Text(
+                'Pilih Sumber Foto',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.deepForest,
+                ),
+              ),
+              const SizedBox(height: 12),
+              ListTile(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.softSage.withValues(alpha: 0.45),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.photo_camera_outlined,
+                    color: AppColors.forestGreen,
+                  ),
+                ),
+                title: const Text(
+                  'Ambil dari Kamera',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.deepForest,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _ambil(ImageSource.camera);
+                },
+              ),
+              const SizedBox(height: 6),
+              ListTile(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.softSage.withValues(alpha: 0.45),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.photo_library_outlined,
+                    color: AppColors.forestGreen,
+                  ),
+                ),
+                title: const Text(
+                  'Pilih dari Galeri',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.deepForest,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _ambil(ImageSource.gallery);
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
         ),
       ),
     );
@@ -77,6 +134,7 @@ class _FotoPickerFieldState extends State<FotoPickerField> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Gagal mengambil foto. Periksa izin kamera/galeri.'),
+          backgroundColor: AppColors.error,
         ),
       );
     }
@@ -98,8 +156,6 @@ class _FotoPickerFieldState extends State<FotoPickerField> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
     return SizedBox(
       height: _ukuran,
       child: ListView(
@@ -107,35 +163,44 @@ class _FotoPickerFieldState extends State<FotoPickerField> {
         children: [
           for (var i = 0; i < _foto.length; i++)
             Padding(
-              padding: const EdgeInsets.only(right: 10),
+              padding: const EdgeInsets.only(right: 12),
               child: Stack(
                 children: [
                   GestureDetector(
                     onTap: () => _lihat(i),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.memory(
-                        _foto[i],
-                        width: _ukuran,
-                        height: _ukuran,
-                        fit: BoxFit.cover,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppColors.borderSubtle),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(13),
+                        child: Image.memory(
+                          _foto[i],
+                          width: _ukuran,
+                          height: _ukuran,
+                          fit: BoxFit.cover,
+                        ),
                       ),
                     ),
                   ),
                   Positioned(
-                    top: 4,
-                    right: 4,
+                    top: 5,
+                    right: 5,
                     child: InkWell(
                       onTap: () => _hapus(i),
                       customBorder: const CircleBorder(),
                       child: Container(
-                        padding: const EdgeInsets.all(3),
-                        decoration: const BoxDecoration(
-                          color: Colors.black54,
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: AppColors.deepForest.withValues(alpha: 0.75),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.close_rounded,
-                            size: 14, color: Colors.white),
+                        child: const Icon(
+                          Icons.close_rounded,
+                          size: 13,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),
@@ -145,28 +210,33 @@ class _FotoPickerFieldState extends State<FotoPickerField> {
           if (_foto.length < widget.maxFoto)
             InkWell(
               onTap: _pilihSumber,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(14),
               child: Container(
                 width: _ukuran,
                 height: _ukuran,
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  border:
-                      Border.all(color: scheme.primary.withValues(alpha: 0.4)),
-                  borderRadius: BorderRadius.circular(12),
+                  color: AppColors.surfaceContainerLow,
+                  border: Border.all(
+                    color: AppColors.sageGreen.withValues(alpha: 0.5),
+                    width: 1.2,
+                  ),
+                  borderRadius: BorderRadius.circular(14),
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.add_a_photo_outlined,
-                        color: scheme.primary, size: 24),
-                    const SizedBox(height: 4),
+                    const Icon(
+                      Icons.add_a_photo_outlined,
+                      color: AppColors.forestGreen,
+                      size: 24,
+                    ),
+                    const SizedBox(height: 5),
                     Text(
                       '${_foto.length}/${widget.maxFoto}',
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: scheme.primary,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.forestGreen,
                       ),
                     ),
                   ],

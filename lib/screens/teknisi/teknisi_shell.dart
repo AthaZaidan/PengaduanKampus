@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../models/app_user.dart';
 import '../../providers/laporan_provider.dart';
 import '../shared/kerangka_navigasi.dart';
@@ -11,11 +12,7 @@ class TeknisiShell extends StatefulWidget {
   final LaporanProvider provider;
   final AppUser user;
 
-  const TeknisiShell({
-    super.key,
-    required this.provider,
-    required this.user,
-  });
+  const TeknisiShell({super.key, required this.provider, required this.user});
 
   @override
   State<TeknisiShell> createState() => _TeknisiShellState();

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../models/app_user.dart';
 import '../../models/laporan.dart';
 import '../../providers/laporan_provider.dart';
@@ -9,7 +10,11 @@ class UserLaporanPage extends StatelessWidget {
   final LaporanProvider provider;
   final AppUser user;
 
-  const UserLaporanPage({super.key, required this.provider, required this.user});
+  const UserLaporanPage({
+    super.key,
+    required this.provider,
+    required this.user,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -19,11 +24,14 @@ class UserLaporanPage extends StatelessWidget {
       judul: 'Laporan Saya',
       tabs: const [
         TabStatus('Semua'),
-        TabStatus('Menunggu', status: {
-          StatusLaporan.menunggu,
-          StatusLaporan.diverifikasi,
-          StatusLaporan.ditugaskan,
-        }),
+        TabStatus(
+          'Menunggu',
+          status: {
+            StatusLaporan.menunggu,
+            StatusLaporan.diverifikasi,
+            StatusLaporan.ditugaskan,
+          },
+        ),
         TabStatus('Dikerjakan', status: {StatusLaporan.diproses}),
         TabStatus('Selesai', status: {StatusLaporan.selesai}),
         TabStatus('Ditolak', status: {StatusLaporan.ditolak}),
