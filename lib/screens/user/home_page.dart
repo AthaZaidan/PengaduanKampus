@@ -322,14 +322,11 @@ class HomePage extends StatelessWidget {
             SliverToBoxAdapter(
               child: Center(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 40,
-                    vertical: 32,
-                  ),
+                  padding: const EdgeInsets.fromLTRB(40, 32, 40, 100),
                   child: Column(
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(18),
                         decoration: BoxDecoration(
                           color: AppColors.softSage.withValues(alpha: 0.35),
                           shape: BoxShape.circle,
@@ -349,13 +346,14 @@ class HomePage extends StatelessWidget {
                           color: AppColors.deepForest,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 6),
                       const Text(
-                        'Laporan yang Anda kirimkan akan ditampilkan di sini.',
+                        'Ketuk tombol "+ Buat Laporan" untuk melaporkan kerusakan fasilitas kampus.',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 12.5,
+                          height: 1.4,
                         ),
                       ),
                     ],

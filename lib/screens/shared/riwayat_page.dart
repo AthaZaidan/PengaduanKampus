@@ -380,29 +380,23 @@ class _RiwayatCard extends StatelessWidget {
                             shape: BoxShape.circle,
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 6),
+                        // Prioritas: dot indicator + label teks (tanpa pill latar)
                         Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 1.5,
-                          ),
+                          width: 7,
+                          height: 7,
                           decoration: BoxDecoration(
-                            color: laporan.prioritas.backgroundColor,
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(
-                              color: laporan.prioritas.color.withValues(
-                                alpha: 0.25,
-                              ),
-                              width: 0.8,
-                            ),
+                            color: laporan.prioritas.color,
+                            shape: BoxShape.circle,
                           ),
-                          child: Text(
-                            laporan.prioritas.label,
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                              color: laporan.prioritas.color,
-                            ),
+                        ),
+                        const SizedBox(width: 3),
+                        Text(
+                          laporan.prioritas.label,
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w600,
+                            color: laporan.prioritas.color,
                           ),
                         ),
                         if (laporan.foto.isNotEmpty) ...[

@@ -2,64 +2,75 @@ import 'package:flutter/material.dart';
 
 /// Identitas visual dan palet warna utama Pengaduan Kampus.
 ///
-/// Palet 5 Warna Utama:
-/// - Soft Sage   : #D0D4C5 — latar belakang terang & surface lembut.
-/// - Sage Green  : #769E77 — aksen, elemen interaktif sekunder, komponen pilihan.
-/// - Forest Green: #406E49 — primary, tombol utama, elemen aktif.
-/// - Deep Forest : #0D261B — teks utama, dark surface, penekanan tinggi.
-/// - Muted Teal  : #6D9492 — aksen pelengkap dan variasi visual.
+/// Proporsi 60-30-10:
+///   60%  → Scaffold background #F6F8F6 (off-white kehijauan)
+///   30%  → Forest Green #406E49 (AppBar, tombol utama, indikator aktif)
+///   10%  → Sage Green #769E77 (aksen sekunder)
+///
+/// Palet 5 Warna Pokok:
+///   #D0D4C5 — Soft Sage   : highlight permukaan / pill navigasi aktif
+///   #769E77 — Sage Green  : aksen interaktif sekunder
+///   #406E49 — Forest Green: primary brand, tombol utama, elemen aktif
+///   #0D261B — Deep Forest : teks utama, dark surface, penekanan tinggi
+///   #6D9492 — Muted Teal  : aksen pelengkap, Dikerjakan/Ditugaskan
 class AppColors {
   AppColors._();
 
-  // 1. Lima Warna Pokok (Brand Identity)
+  // ── 5 Warna Pokok (Brand Identity) ───────────────────────────────────────
   static const Color softSage = Color(0xFFD0D4C5);
   static const Color sageGreen = Color(0xFF769E77);
   static const Color forestGreen = Color(0xFF406E49);
   static const Color deepForest = Color(0xFF0D261B);
   static const Color mutedTeal = Color(0xFF6D9492);
 
-  // 2. Surface & Background Netral (Harmonis dengan Soft Sage)
-  static const Color background = Color(0xFFF4F6F0);
+  // ── Surface & Background ─────────────────────────────────────────────────
+  /// Scaffold background — 60% dominan, off-white kehijauan sangat lembut.
+  static const Color background = Color(0xFFF6F8F6);
   static const Color surface = Color(0xFFFFFFFF);
-  static const Color surfaceContainer = Color(0xFFE8EDE4);
-  static const Color surfaceContainerLow = Color(0xFFEFF3EB);
-  static const Color surfaceContainerHigh = Color(0xFFDFE6DB);
+  static const Color surfaceContainer = Color(0xFFEBEEE9);
+  static const Color surfaceContainerLow = Color(0xFFF0F3EF);
+  static const Color surfaceContainerHigh = Color(0xFFE0E5DE);
 
-  // 3. Borders & Dividers
-  static const Color borderSubtle = Color(0xFFE0E6DC);
-  static const Color borderMedium = Color(0xFFC2CBBF);
+  // ── Borders & Dividers ───────────────────────────────────────────────────
+  static const Color borderSubtle = Color(0xFFE3E8E4);
+  static const Color borderMedium = Color(0xFFC4CEBD);
   static const Color divider = Color(0xFFE5EBE1);
 
-  // 4. Typography / Teks
-  static const Color textPrimary = Color(0xFF0D261B);
+  // ── Typography ───────────────────────────────────────────────────────────
+  static const Color textPrimary = Color(0xFF0D261B); // Deep Forest
   static const Color textSecondary = Color(0xFF3F5448);
-  static const Color textMuted = Color(0xFF708579);
+  static const Color textMuted = Color(0xFF7B9082);
   static const Color textLight = Color(0xFFFFFFFF);
 
-  // 5. Semantic Status Colors (Terkurasi agar harmonis & mudah dibaca)
-  static const Color statusMenunggu = Color(0xFFD97706);
-  static const Color statusMenungguBg = Color(0xFFFEF3C7);
+  // ── Semantic Status — Muted Tones ────────────────────────────────────────
+  /// Menunggu / Dilaporkan / Baru / Perlu Verifikasi → Muted Amber
+  static const Color statusMenunggu = Color(0xFFB58938);
+  static const Color statusMenungguBg = Color(0xFFFBF6EC);
 
-  static const Color statusDiverifikasi = Color(0xFF5B7A68);
-  static const Color statusDiverifikasiBg = Color(0xFFE5EFE9);
+  /// Terverifikasi → ringan hijau sage, serasi dengan brand
+  static const Color statusDiverifikasi = Color(0xFF406E49);
+  static const Color statusDiverifikasiBg = Color(0xFFEAF0EC);
 
-  static const Color statusDitugaskan = Color(0xFF0E7490);
-  static const Color statusDitugaskanBg = Color(0xFFE0F2FE);
+  /// Ditugaskan / Dikerjakan → Muted Teal (Slate Teal)
+  static const Color statusDitugaskan = Color(0xFF6D9492);
+  static const Color statusDitugaskanBg = Color(0xFFEDF3F3);
 
-  static const Color statusDiproses = Color(0xFF2563EB);
-  static const Color statusDiprosesBg = Color(0xFFEFF6FF);
+  static const Color statusDiproses = Color(0xFF6D9492);
+  static const Color statusDiprosesBg = Color(0xFFEDF3F3);
 
-  static const Color statusSelesai = Color(0xFF2E6B39);
-  static const Color statusSelesaiBg = Color(0xFFDCFCE7);
+  /// Selesai / Tepat Waktu → Forest Green
+  static const Color statusSelesai = Color(0xFF406E49);
+  static const Color statusSelesaiBg = Color(0xFFEAF0EC);
 
-  static const Color statusDitolak = Color(0xFFDC2626);
-  static const Color statusDitolakBg = Color(0xFFFEE2E2);
+  /// Ditolak / Lewat SLA / Prioritas Tinggi → Muted Terracotta
+  static const Color statusDitolak = Color(0xFFB84A4A);
+  static const Color statusDitolakBg = Color(0xFFFDF2F2);
 
-  // 6. Semantic Alerts / Notification
-  static const Color error = Color(0xFFDC2626);
-  static const Color success = Color(0xFF2E6B39);
-  static const Color warning = Color(0xFFD97706);
-  static const Color info = Color(0xFF2563EB);
+  // ── Semantic Alerts ──────────────────────────────────────────────────────
+  static const Color error = Color(0xFFB84A4A);
+  static const Color success = Color(0xFF406E49);
+  static const Color warning = Color(0xFFB58938);
+  static const Color info = Color(0xFF6D9492);
 }
 
 /// Konfigurasi Tema Terpusat (Material 3).
@@ -67,18 +78,18 @@ class AppTheme {
   AppTheme._();
 
   static ThemeData get lightTheme {
-    final colorScheme = const ColorScheme.light(
+    const colorScheme = ColorScheme.light(
       primary: AppColors.forestGreen,
       onPrimary: Colors.white,
       primaryContainer: AppColors.softSage,
       onPrimaryContainer: AppColors.deepForest,
       secondary: AppColors.sageGreen,
       onSecondary: Colors.white,
-      secondaryContainer: Color(0xFFE2E9DC),
+      secondaryContainer: Color(0xFFE2ECDC),
       onSecondaryContainer: AppColors.deepForest,
       tertiary: AppColors.mutedTeal,
       onTertiary: Colors.white,
-      tertiaryContainer: Color(0xFFE0EBEA),
+      tertiaryContainer: Color(0xFFDFECEB),
       onTertiaryContainer: AppColors.deepForest,
       surface: AppColors.surface,
       onSurface: AppColors.deepForest,
@@ -99,7 +110,7 @@ class AppTheme {
       colorScheme: colorScheme,
       scaffoldBackgroundColor: AppColors.background,
 
-      // App Bar Theme
+      // App Bar
       appBarTheme: const AppBarTheme(
         elevation: 0,
         scrolledUnderElevation: 1,
@@ -115,7 +126,7 @@ class AppTheme {
         ),
       ),
 
-      // Card Theme
+      // Card
       cardTheme: CardThemeData(
         elevation: 0,
         color: AppColors.surface,
@@ -126,7 +137,7 @@ class AppTheme {
         ),
       ),
 
-      // Elevated Button Theme
+      // Elevated Button
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           elevation: 0,
@@ -146,7 +157,7 @@ class AppTheme {
         ),
       ),
 
-      // Filled Button Theme
+      // Filled Button
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           elevation: 0,
@@ -160,7 +171,7 @@ class AppTheme {
         ),
       ),
 
-      // Outlined Button Theme
+      // Outlined Button
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.forestGreen,
@@ -173,7 +184,7 @@ class AppTheme {
         ),
       ),
 
-      // Text Button Theme
+      // Text Button
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: AppColors.forestGreen,
@@ -181,7 +192,7 @@ class AppTheme {
         ),
       ),
 
-      // Input Decoration Theme
+      // Input Decoration
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: Colors.white,
@@ -219,7 +230,7 @@ class AppTheme {
         ),
       ),
 
-      // Navigation Bar Theme
+      // Navigation Bar
       navigationBarTheme: NavigationBarThemeData(
         height: 68,
         elevation: 0,
@@ -247,7 +258,7 @@ class AppTheme {
         }),
       ),
 
-      // Floating Action Button
+      // FAB
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
         backgroundColor: AppColors.forestGreen,
         foregroundColor: Colors.white,
@@ -260,7 +271,7 @@ class AppTheme {
         ),
       ),
 
-      // Dialog Theme
+      // Dialog
       dialogTheme: DialogThemeData(
         backgroundColor: Colors.white,
         elevation: 8,
@@ -277,7 +288,7 @@ class AppTheme {
         ),
       ),
 
-      // Bottom Sheet Theme
+      // Bottom Sheet
       bottomSheetTheme: const BottomSheetThemeData(
         backgroundColor: Colors.white,
         elevation: 10,
@@ -286,14 +297,14 @@ class AppTheme {
         ),
       ),
 
-      // Divider Theme
+      // Divider
       dividerTheme: const DividerThemeData(
         color: AppColors.divider,
         thickness: 1,
         space: 1,
       ),
 
-      // Chip Theme
+      // Chip
       chipTheme: ChipThemeData(
         backgroundColor: AppColors.surfaceContainerLow,
         disabledColor: AppColors.borderSubtle,
@@ -316,7 +327,7 @@ class AppTheme {
         ),
       ),
 
-      // Tab Bar Theme
+      // Tab Bar
       tabBarTheme: const TabBarThemeData(
         labelColor: Colors.white,
         unselectedLabelColor: Colors.white70,
@@ -329,7 +340,7 @@ class AppTheme {
         ),
       ),
 
-      // SnackBar Theme
+      // SnackBar
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
         backgroundColor: AppColors.deepForest,

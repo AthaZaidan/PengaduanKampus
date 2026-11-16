@@ -423,29 +423,28 @@ class _BarisAntrian extends StatelessWidget {
                       runSpacing: 4,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 7,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: laporan.prioritas.backgroundColor,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: laporan.prioritas.color.withValues(
-                                alpha: 0.3,
+                        // Prioritas: dot indicator + teks (tanpa pill latar)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 7,
+                              height: 7,
+                              decoration: BoxDecoration(
+                                color: laporan.prioritas.color,
+                                shape: BoxShape.circle,
                               ),
-                              width: 0.8,
                             ),
-                          ),
-                          child: Text(
-                            laporan.prioritas.label,
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                              color: laporan.prioritas.color,
+                            const SizedBox(width: 4),
+                            Text(
+                              laporan.prioritas.label,
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w600,
+                                color: laporan.prioritas.color,
+                              ),
                             ),
-                          ),
+                          ],
                         ),
                         SlaChip(laporan: laporan),
                       ],

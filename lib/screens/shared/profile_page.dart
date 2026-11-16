@@ -294,19 +294,15 @@ class _ProfilePageState extends State<ProfilePage> {
       children: [
         // ---------------------------------------------------------- header
         Container(
-          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+          padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 20),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [AppColors.deepForest, AppColors.forestGreen],
-            ),
+            color: AppColors.forestGreen,
             boxShadow: [
               BoxShadow(
-                color: AppColors.deepForest.withValues(alpha: 0.12),
-                blurRadius: 16,
-                offset: const Offset(0, 4),
+                color: AppColors.forestGreen.withValues(alpha: 0.08),
+                blurRadius: 12,
+                offset: const Offset(0, 3),
               ),
             ],
           ),
@@ -406,6 +402,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     nilai: daftar.length,
                     label: 'Total',
                     warna: AppColors.forestGreen,
+                    latar: AppColors.statusSelesaiBg,
                   ),
                   _AngkaRingkas(
                     nilai: hitung({
@@ -415,16 +412,19 @@ class _ProfilePageState extends State<ProfilePage> {
                     }),
                     label: 'Menunggu',
                     warna: AppColors.statusMenunggu,
+                    latar: AppColors.statusMenungguBg,
                   ),
                   _AngkaRingkas(
                     nilai: hitung({StatusLaporan.diproses}),
                     label: 'Dikerjakan',
                     warna: AppColors.statusDiproses,
+                    latar: AppColors.statusDiprosesBg,
                   ),
                   _AngkaRingkas(
                     nilai: hitung({StatusLaporan.selesai}),
                     label: 'Selesai',
                     warna: AppColors.statusSelesai,
+                    latar: AppColors.statusSelesaiBg,
                   ),
                 ],
               );
@@ -590,11 +590,13 @@ class _AngkaRingkas extends StatelessWidget {
   final int nilai;
   final String label;
   final Color warna;
+  final Color latar;
 
   const _AngkaRingkas({
     required this.nilai,
     required this.label,
     required this.warna,
+    required this.latar,
   });
 
   @override
@@ -602,15 +604,22 @@ class _AngkaRingkas extends StatelessWidget {
     return Expanded(
       child: Column(
         children: [
-          Text(
-            '$nilai',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: warna,
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(color: latar, shape: BoxShape.circle),
+            child: Center(
+              child: Text(
+                '$nilai',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: warna,
+                ),
+              ),
             ),
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 6),
           Text(
             label,
             style: const TextStyle(

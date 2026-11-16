@@ -250,16 +250,16 @@ extension PrioritasExt on PrioritasLaporan {
       case PrioritasLaporan.rendah:
         return AppColors.sageGreen;
       case PrioritasLaporan.sedang:
-        return AppColors.statusMenunggu;
+        return AppColors.warning;
       case PrioritasLaporan.tinggi:
-        return AppColors.error;
+        return AppColors.statusDitolak; // Muted Terracotta
     }
   }
 
   Color get backgroundColor {
     switch (this) {
       case PrioritasLaporan.rendah:
-        return AppColors.softSage.withValues(alpha: 0.4);
+        return AppColors.statusSelesaiBg;
       case PrioritasLaporan.sedang:
         return AppColors.statusMenungguBg;
       case PrioritasLaporan.tinggi:
