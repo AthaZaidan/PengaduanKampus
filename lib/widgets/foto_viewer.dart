@@ -2,7 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
-import 'foto_storage.dart';
+import 'foto_lokal.dart';
 
 /// Halaman layar penuh untuk melihat foto lampiran (geser & zoom).
 class FotoViewerPage extends StatefulWidget {
@@ -60,7 +60,7 @@ class _FotoViewerPageState extends State<FotoViewerPage> {
           child: Center(
             child: i < widget.foto.length
                 ? Image.memory(widget.foto[i], fit: BoxFit.contain)
-                : FotoStorage(path: widget.paths[i - widget.foto.length]),
+                : FotoLokal(path: widget.paths[i - widget.foto.length]),
           ),
         ),
       ),

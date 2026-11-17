@@ -25,7 +25,7 @@ class LambangKampusPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     canvas.save();
     canvas.scale(size.width / 64, size.height / 64);
-    final background = Paint()..color = TemaKampus.biru;
+    final background = Paint()..color = TemaKampus.utama;
     if (latarPenuh) {
       canvas.drawRect(const Rect.fromLTWH(0, 0, 64, 64), background);
     } else {
@@ -60,12 +60,12 @@ class LambangKampusPainter extends CustomPainter {
     canvas.drawCircle(
       const Offset(47, 44),
       10,
-      Paint()..color = TemaKampus.biru,
+      Paint()..color = TemaKampus.utama,
     );
     canvas.drawCircle(
       const Offset(47, 44),
       8.2,
-      Paint()..color = TemaKampus.emas,
+      Paint()..color = TemaKampus.aksen,
     );
     canvas.drawPath(
       Path()
@@ -73,7 +73,7 @@ class LambangKampusPainter extends CustomPainter {
         ..lineTo(46, 46.6)
         ..lineTo(50.8, 41.4),
       Paint()
-        ..color = TemaKampus.biru
+        ..color = TemaKampus.utama
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2.2
         ..strokeCap = StrokeCap.round

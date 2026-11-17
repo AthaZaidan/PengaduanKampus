@@ -4,7 +4,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import '../../services/fitur_laporan_service.dart';
-import '../../services/notifikasi_push_service.dart';
 import '../../services/laporan_repository.dart';
 
 import '../../models/app_user.dart';
@@ -28,22 +27,46 @@ class _NotifikasiPageState extends State<NotifikasiPage> {
   AppUser get user => widget.user;
   Set<String> _dibaca = {};
   StreamSubscription<Set<String>>? _subscription;
-  bool _sibuk = false;
-  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _komentarSub;
-  List<QueryDocumentSnapshot<Map<String, dynamic>>> _pesan = [];
+  final _komentarSubs =
+      <String, StreamSubscription<QuerySnapshot<Map<String, dynamic>>>>{};
+  final _komentar =
+      <String, List<QueryDocumentSnapshot<Map<String, dynamic>>>>{};
+  bool _komentarGagal = false;
+
+  void _pantauKomentar() {
+    if (!provider.menggunakanFirebase) return;
+    final ids = provider.untuk(user).map((l) => l.id).toSet();
+    for (final id in _komentarSubs.keys.toList()) {
+      if (!ids.contains(id)) {
+        _komentarSubs.remove(id)?.cancel();
+        _komentar.remove(id);
+      }
+    }
+    for (final id in ids) {
+      _komentarSubs.putIfAbsent(
+        id,
+        () => FirebaseFirestore.instance
+            .collection('laporan/$id/komentar')
+            .orderBy('createdAt')
+            .limitToLast(10)
+            .snapshots()
+            .listen(
+              (s) {
+                if (mounted) setState(() => _komentar[id] = s.docs);
+              },
+              onError: (Object _) {
+                if (mounted) setState(() => _komentarGagal = true);
+              },
+            ),
+      );
+    }
+  }
+
   @override
   void initState() {
     super.initState();
-    if (provider.menggunakanFirebase) {
-      _komentarSub = FirebaseFirestore.instance
-          .collection('users/${user.uid}/pesan_masuk')
-          .orderBy('waktu', descending: true)
-          .limit(100)
-          .snapshots()
-          .listen((s) {
-            if (mounted) setState(() => _pesan = s.docs);
-          }, onError: (Object _) {});
-    }
+    provider.addListener(_pantauKomentar);
+    _pantauKomentar();
     if (provider.menggunakanFirebase) {
       _subscription = FiturLaporanService(user.uid).dibaca().listen(
         (ids) {
@@ -62,7 +85,10 @@ class _NotifikasiPageState extends State<NotifikasiPage> {
 
   @override
   void dispose() {
-    _komentarSub?.cancel();
+    provider.removeListener(_pantauKomentar);
+    for (final sub in _komentarSubs.values) {
+      sub.cancel();
+    }
     _subscription?.cancel();
     super.dispose();
   }
@@ -82,27 +108,6 @@ class _NotifikasiPageState extends State<NotifikasiPage> {
     }
   }
 
-  Future<void> _aktifkan() async {
-    setState(() => _sibuk = true);
-    try {
-      await NotifikasiPushService.instance.aktifkan(user);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Perangkat terdaftar untuk notifikasi push.'),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(pesanGalatFirebase(e))));
-      }
-    } finally {
-      if (mounted) setState(() => _sibuk = false);
-    }
-  }
-
   List<_Notif> _kumpulkan() {
     final hasil = <_Notif>[];
     for (final laporan in provider.untuk(user)) {
@@ -115,25 +120,28 @@ class _NotifikasiPageState extends State<NotifikasiPage> {
         hasil.add(_Notif(laporan, laporan.riwayat[i], '${laporan.id}_$i'));
       }
     }
-    for (final doc in _pesan) {
-      final list = provider
-          .untuk(user)
-          .where((l) => l.id == doc.data()['laporanId']);
-      if (list.isEmpty) continue;
-      final waktu = doc.data()['waktu'];
-      if (waktu is! Timestamp) continue;
-      hasil.add(
-        _Notif(
-          list.first,
-          RiwayatStatus(
-            status: list.first.status,
-            waktu: waktu.toDate(),
-            oleh: 'Pesan klarifikasi',
+    for (final laporan in provider.untuk(user)) {
+      for (final doc
+          in _komentar[laporan.id] ??
+              <QueryDocumentSnapshot<Map<String, dynamic>>>[]) {
+        final data = doc.data();
+        if (data['uid'] == user.uid) continue;
+        final waktu = data['createdAt'];
+        if (waktu is! Timestamp) continue;
+        hasil.add(
+          _Notif(
+            laporan,
+            RiwayatStatus(
+              status: laporan.status,
+              waktu: waktu.toDate(),
+              oleh: data['nama'] as String? ?? 'Pengguna',
+              catatan: data['teks'] as String?,
+            ),
+            'komentar_${laporan.id}_${doc.id}',
+            komentar: true,
           ),
-          doc.id,
-          komentar: true,
-        ),
-      );
+        );
+      }
     }
     hasil.sort((a, b) => b.entri.waktu.compareTo(a.entri.waktu));
     return hasil;
@@ -152,7 +160,7 @@ class _NotifikasiPageState extends State<NotifikasiPage> {
     final daftar = _kumpulkan();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text(
           'Notifikasi',
@@ -164,8 +172,6 @@ class _NotifikasiPageState extends State<NotifikasiPage> {
             onSelected: (v) {
               if (v == 'baca') {
                 _tandai(daftar.map((n) => n.id));
-              } else if (!_sibuk) {
-                _aktifkan();
               }
             },
             itemBuilder: (_) => [
@@ -173,17 +179,22 @@ class _NotifikasiPageState extends State<NotifikasiPage> {
                 value: 'baca',
                 child: Text('Tandai semua dibaca'),
               ),
-              if (provider.menggunakanFirebase)
-                const PopupMenuItem(
-                  value: 'push',
-                  child: Text('Aktifkan notifikasi push'),
-                ),
             ],
           ),
         ],
         backgroundColor: scheme.surface,
         foregroundColor: scheme.onSurface,
       ),
+      bottomNavigationBar: _komentarGagal
+          ? const SafeArea(
+              child: Padding(
+                padding: EdgeInsets.all(12),
+                child: Text(
+                  'Komentar notifikasi belum dapat dimuat. Buka ulang halaman untuk mencoba lagi.',
+                ),
+              ),
+            )
+          : null,
       body: daftar.isEmpty
           ? Center(
               child: Padding(

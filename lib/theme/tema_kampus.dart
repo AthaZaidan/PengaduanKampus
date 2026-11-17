@@ -1,24 +1,32 @@
 import 'package:flutter/material.dart';
 
+import 'palet_kampus.dart';
+
 /// Identitas layanan kampus dipakai bersama oleh seluruh peran.
 class TemaKampus {
-  static const biru = Color(0xFF203B5C);
-  static const tinta = Color(0xFF1E293B);
-  static const latar = Color(0xFFF5F7FA);
-  static const garis = Color(0xFFDCE3EB);
-  static const emas = Color(0xFFBEA271);
+  static const utama = AppColors.forestGreen;
+  static const tinta = AppColors.deepForest;
+  static const latar = AppColors.background;
+  static const garis = AppColors.borderSubtle;
+  static const aksen = AppColors.softSage;
 
   static ThemeData bangun() {
-    final scheme = ColorScheme.fromSeed(seedColor: biru).copyWith(
-      primary: biru,
+    final scheme = ColorScheme.fromSeed(seedColor: utama).copyWith(
+      primary: utama,
       onPrimary: Colors.white,
-      secondary: const Color(0xFF526B80),
+      secondary: AppColors.sageGreen,
+      onSecondary: AppColors.deepForest,
+      primaryContainer: AppColors.softSage,
+      onPrimaryContainer: AppColors.deepForest,
+      secondaryContainer: AppColors.surfaceContainerHigh,
+      onSecondaryContainer: AppColors.deepForest,
+      tertiary: AppColors.mutedTeal,
       surface: Colors.white,
       onSurface: tinta,
-      onSurfaceVariant: const Color(0xFF5B6B7D),
-      outline: const Color(0xFF8B99AA),
+      onSurfaceVariant: AppColors.textSecondary,
+      outline: AppColors.borderMedium,
       outlineVariant: garis,
-      error: const Color(0xFFAC3838),
+      error: AppColors.error,
     );
     final bentuk = RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(10),
@@ -95,7 +103,7 @@ class TemaKampus {
         hintStyle: const TextStyle(
           fontFamily: 'Roboto',
           fontSize: 14,
-          color: Color(0xFF718096),
+          color: AppColors.textMuted,
         ),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
@@ -111,12 +119,12 @@ class TemaKampus {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: biru, width: 1.5),
+          borderSide: const BorderSide(color: utama, width: 1.5),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: biru,
+          backgroundColor: utama,
           foregroundColor: Colors.white,
           elevation: 0,
           minimumSize: const Size(0, 48),
@@ -142,7 +150,7 @@ class TemaKampus {
         ),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: biru,
+        backgroundColor: utama,
         foregroundColor: Colors.white,
         elevation: 1,
         shape: bentuk,
@@ -152,7 +160,7 @@ class TemaKampus {
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         height: 72,
-        indicatorColor: const Color(0xFFE7EEF5),
+        indicatorColor: AppColors.softSage,
         labelTextStyle: WidgetStateProperty.resolveWith(
           (states) => TextStyle(
             fontSize: 11,
@@ -160,7 +168,7 @@ class TemaKampus {
                 ? FontWeight.w600
                 : FontWeight.w400,
             color: states.contains(WidgetState.selected)
-                ? biru
+                ? utama
                 : scheme.onSurfaceVariant,
           ),
         ),
@@ -168,15 +176,15 @@ class TemaKampus {
           (states) => IconThemeData(
             size: 23,
             color: states.contains(WidgetState.selected)
-                ? biru
+                ? utama
                 : scheme.onSurfaceVariant,
           ),
         ),
       ),
       tabBarTheme: TabBarThemeData(
-        labelColor: biru,
+        labelColor: utama,
         unselectedLabelColor: scheme.onSurfaceVariant,
-        indicatorColor: biru,
+        indicatorColor: utama,
         dividerColor: garis,
         labelStyle: const TextStyle(
           fontFamily: 'Roboto',

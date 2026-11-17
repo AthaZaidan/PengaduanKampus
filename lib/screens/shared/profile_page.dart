@@ -8,7 +8,6 @@ import '../../widgets/identitas_kampus.dart';
 import '../../models/laporan.dart';
 import '../../providers/laporan_provider.dart';
 import '../authentication/login_page.dart';
-import '../../services/notifikasi_push_service.dart';
 import '../admin/kelola_lokasi_page.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -108,9 +107,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
     if (yakin != true) return;
 
-    try {
-      await NotifikasiPushService.instance.keluar();
-    } catch (_) {
+    try {} catch (_) {
       if (mounted) {
         _snack(
           'Belum dapat menonaktifkan notifikasi perangkat. Periksa koneksi sebelum keluar.',
@@ -240,7 +237,7 @@ class _ProfilePageState extends State<ProfilePage> {
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         bottom: _menyimpanProfil
             ? const PreferredSize(

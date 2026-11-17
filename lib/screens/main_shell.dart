@@ -1,9 +1,4 @@
-import 'dart:async';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
-
-import '../services/notifikasi_push_service.dart';
-import 'shared/notifikasi_page.dart';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -51,46 +46,12 @@ class _MainShellState extends State<MainShell> {
     );
     if (mounted) {
       widget.provider.hubungkan(user);
-      void buka() {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) =>
-                    NotifikasiPage(provider: widget.provider, user: user),
-              ),
-            );
-          }
-        });
-      }
-
-      unawaited(
-        NotifikasiPushService.instance
-            .hubungkan(
-              user,
-              onBuka: buka,
-              onPesan: (pesan) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(pesan),
-                      action: SnackBarAction(label: 'Lihat', onPressed: buka),
-                    ),
-                  );
-                }
-              },
-            )
-            .catchError((Object _) {
-              /* Aktivasi dapat dicoba lagi dari halaman Notifikasi. */
-            }),
-      );
     }
     return user;
   }
 
   @override
   void dispose() {
-    NotifikasiPushService.instance.hentikan();
     widget.provider.putuskan();
     super.dispose();
   }

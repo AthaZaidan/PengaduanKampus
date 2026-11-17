@@ -1,7 +1,8 @@
 import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+
+import 'foto_lokal_service.dart';
 
 import '../models/app_user.dart';
 
@@ -52,9 +53,9 @@ class FiturLaporanService {
   }
 
   Future<void> hapusFotoDraf(String path) =>
-      FirebaseStorage.instance.ref(path).delete();
+      FotoLokalService.instance.hapus(path);
 
-  Future<String> uploadDraf(Uint8List bytes) async {
+  Future<String> simpanFotoDraf(Uint8List bytes) async {
     if (bytes.isEmpty || bytes.length > 5 * 1024 * 1024) {
       throw StateError('Foto maksimal 5 MB.');
     }
@@ -67,18 +68,7 @@ class FiturLaporanService {
       throw StateError('Gunakan foto JPEG, PNG, atau WebP.');
     }
     final path = 'draf/$uid/${db.collection('laporan').doc().id}';
-    await FirebaseStorage.instance
-        .ref(path)
-        .putData(
-          bytes,
-          SettableMetadata(
-            contentType: png
-                ? 'image/png'
-                : jpg
-                ? 'image/jpeg'
-                : 'image/webp',
-          ),
-        );
+    await FotoLokalService.instance.simpan(path, bytes);
     return path;
   }
 

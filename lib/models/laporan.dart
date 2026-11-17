@@ -56,10 +56,10 @@ class Laporan {
   /// Foto lampiran pelapor = foto SEBELUM penanganan.
   final List<Uint8List> foto;
 
-  /// Foto SESUDAH penanganan (diunggah teknisi saat menyelesaikan).
+  /// Foto SESUDAH penanganan (disimpan lokal saat teknisi menyelesaikan).
   final List<Uint8List> fotoSesudah;
 
-  /// Path privat di Storage; gambar tidak dimasukkan ke dokumen Firestore.
+  /// Referensi foto lokal relatif; hanya teks path yang masuk Firestore, bukan gambar.
   final List<String> fotoPaths;
   final List<String> fotoSesudahPaths;
   final int revisi;

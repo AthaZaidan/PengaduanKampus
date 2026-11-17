@@ -3,7 +3,6 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const project = 'demo-pengaduan-kampus';
 const host = process.env.FIRESTORE_EMULATOR_HOST;
-const storage = process.env.FIREBASE_STORAGE_EMULATOR_HOST;
 const root = `projects/${project}/databases/(default)/documents`;
 const url = `http://${host}/v1/${root}`;
 function token(uid) {
@@ -53,13 +52,7 @@ async function perubahan(d, id, uid, berikut, extra = {}) {
   d.riwayat.push(entry(berikut, uid));
   return write(`laporan/${id}`, d, uid, ['updatedAt']);
 }
-async function upload(path, uid, contentType = 'image/png', body = Buffer.from([137, 80, 78, 71])) {
-  return fetch(`http://${storage}/v0/b/${project}.appspot.com/o?name=${encodeURIComponent(path)}`, {
-    method: 'POST', headers: { Authorization: `Bearer ${token(uid)}`, 'Content-Type': contentType }, body,
-  });
-}
-
-test('aturan akses dan alur laporan di emulator', { skip: !host || !storage }, async t => {
+test('aturan akses dan alur laporan di emulator', { skip: !host }, async t => {
   for (const [uid, role] of [['admin', 'admin'], ['teknisi', 'teknisi'], ['lain', 'mahasiswa'], ['pelapor', 'mahasiswa']]) {
     await status(await write(`users/${uid}`, { uid, role, name: uid }, 'owner'), 200);
   }
@@ -70,10 +63,10 @@ test('aturan akses dan alur laporan di emulator', { skip: !host || !storage }, a
   });
   const d = laporan('utama');
   const path = 'laporan/pelapor/utama/sebelum/pelapor/foto';
-  await t.test('upload privat, tipe dan pemilik divalidasi', async () => {
-    await status(await upload(path, 'lain'), 403);
-    await status(await upload(path, 'pelapor', 'text/plain'), 403);
-    await status(await upload(path, 'pelapor'), 200);
+  await t.test('referensi foto lokal harus milik laporan yang benar', async () => {
+    const palsu = laporan('foto-palsu');
+    palsu.fotoPaths = ['laporan/lain/lain/sebelum/lain/foto'];
+    await status(await write('laporan/foto-palsu', palsu, 'pelapor', ['createdAt', 'updatedAt']), 403);
     d.fotoPaths.push(path);
   });
   await t.test('pelapor membuat laporan, pengguna lain tidak dapat membaca', async () => {
@@ -110,17 +103,10 @@ test('aturan akses dan alur laporan di emulator', { skip: !host || !storage }, a
   });
   await t.test('foto sesudah dan penyelesaian tersimpan; audit lama tidak boleh diubah', async () => {
     const after = 'laporan/pelapor/utama/sesudah/teknisi/foto';
-    await status(await upload(after, 'teknisi'), 200);
     const palsu = structuredClone(d);
     palsu.riwayat[0].catatan = 'Riwayat dipalsukan';
     await status(await perubahan(palsu, 'utama', 'teknisi', 'selesai'), 403);
     await status(await perubahan(d, 'utama', 'teknisi', 'selesai', { fotoSesudahPaths: [after] }), 200);
-  });
-  await t.test('berkas yang direferensikan tidak boleh dihapus atau dibaca pihak lain', async () => {
-    const file = `http://${storage}/v0/b/${project}.appspot.com/o/${encodeURIComponent(path)}`;
-    await status(await fetch(`${file}?alt=media`, { headers: { Authorization: `Bearer ${token('lain')}` } }), 403);
-    await status(await fetch(`${file}?alt=media`, { headers: { Authorization: `Bearer ${token('pelapor')}` } }), 200);
-    await status(await fetch(file, { method: 'DELETE', headers: { Authorization: `Bearer ${token('pelapor')}` } }), 403);
   });
   await t.test('laporan final tidak boleh diubah atau ditimpa revisi lama', async () => {
     const palsu = structuredClone(d);
@@ -134,8 +120,6 @@ test('aturan akses dan alur laporan di emulator', { skip: !host || !storage }, a
     await status(await write('users/pelapor/draf/aktif', draft, 'lain', ['updatedAt']), 403);
     await status(await write('users/pelapor/dibaca/utama_1', {}, 'pelapor', ['waktu']), 200);
     await status(await write('users/pelapor/dibaca/utama_1', {}, 'lain', ['waktu']), 403);
-    await status(await upload('draf/pelapor/foto', 'pelapor'), 200);
-    await status(await upload('draf/pelapor/foto-lain', 'lain'), 403);
   });
   await t.test('lokasi hanya dapat ditambah admin, klarifikasi hanya peserta', async () => {
     await status(await write('lokasi/a', { nama: 'Gedung A' }, 'admin', ['createdAt']), 200);

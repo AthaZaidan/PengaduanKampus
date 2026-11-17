@@ -1,6 +1,7 @@
 # Miscellaneous
 *.class
 *.log
+/dan ikon aplikasi*
 *.pyc
 *.swp
 .DS_Store

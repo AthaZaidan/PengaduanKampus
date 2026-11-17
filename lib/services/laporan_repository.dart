@@ -2,7 +2,8 @@ import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+
+import 'foto_lokal_service.dart';
 
 import '../models/app_user.dart';
 import '../models/laporan.dart';
@@ -25,10 +26,9 @@ abstract class LaporanRepository {
 }
 
 /// Transaksi membaca ulang dokumen server dan menolak revisi yang sudah usang.
-/// Foto selesai diunggah sebelum transaksi; UI sukses hanya setelah commit.
+/// Foto disalin ke perangkat sebelum transaksi; UI sukses setelah commit server.
 class FirebaseLaporanRepository implements LaporanRepository {
   FirebaseFirestore get _db => FirebaseFirestore.instance;
-  FirebaseStorage get _storage => FirebaseStorage.instance;
   CollectionReference<Map<String, dynamic>> get _koleksi =>
       _db.collection('laporan');
   String get _uid => FirebaseAuth.instance.currentUser!.uid;
@@ -52,7 +52,7 @@ class FirebaseLaporanRepository implements LaporanRepository {
     });
   }
 
-  Future<List<String>> _upload(
+  Future<List<String>> _simpanFoto(
     Laporan l,
     List<Uint8List> foto,
     String jenis,
@@ -65,9 +65,8 @@ class FirebaseLaporanRepository implements LaporanRepository {
         }
         final nama = _koleksi.doc().id;
         final path = 'laporan/${l.pelaporId}/${l.id}/$jenis/$_uid/$nama';
-        await _storage
-            .ref(path)
-            .putData(bytes, SettableMetadata(contentType: _mime(bytes)));
+        _mime(bytes);
+        await FotoLokalService.instance.simpan(path, bytes);
         paths.add(path);
       }
       return paths;
@@ -99,7 +98,7 @@ class FirebaseLaporanRepository implements LaporanRepository {
   Future<void> _bersihkan(List<String> paths) async {
     for (final path in paths) {
       try {
-        await _storage.ref(path).delete();
+        await FotoLokalService.instance.hapus(path);
       } catch (_) {
         // Pembersihan bersifat best effort; jangan menutupi galat utama.
       }
@@ -121,11 +120,16 @@ class FirebaseLaporanRepository implements LaporanRepository {
       if (!path.startsWith('draf/$_uid/')) {
         throw StateError('Lampiran draf tidak valid.');
       }
-      final bytes = await _storage.ref(path).getData(5 * 1024 * 1024);
-      if (bytes == null) throw StateError('Foto draf belum tersedia.');
+      final bytes = await FotoLokalService.instance.baca(path);
+      if (bytes == null) {
+        throw StateError(
+          'Foto draf tidak ada di perangkat ini. Hapus lampiran yang tidak tersedia atau pilih ulang fotonya.',
+        );
+      }
       foto.add(bytes);
     }
-    final paths = await _upload(laporan, foto, 'sebelum');
+    if (foto.length > 3) throw StateError('Maksimal tiga foto laporan.');
+    final paths = await _simpanFoto(laporan, foto, 'sebelum');
     final data = laporan.toFirestore()
       ..['fotoPaths'] = paths
       ..['createdAt'] = FieldValue.serverTimestamp()
@@ -146,7 +150,7 @@ class FirebaseLaporanRepository implements LaporanRepository {
       if (!hasil.fotoPaths.any(paths.contains)) await _bersihkan(paths);
       return hasil;
     } catch (_) {
-      await _bersihkan(paths);
+      // Foto tetap lokal jika respons server terputus.
       rethrow;
     }
   }
@@ -157,7 +161,10 @@ class FirebaseLaporanRepository implements LaporanRepository {
     bool Function(Laporan) perubahan, {
     List<Uint8List> fotoSesudah = const [],
   }) async {
-    final paths = await _upload(sebelumnya, fotoSesudah, 'sesudah');
+    if (sebelumnya.fotoSesudahPaths.length + fotoSesudah.length > 3) {
+      throw StateError('Maksimal tiga foto hasil penanganan.');
+    }
+    final paths = await _simpanFoto(sebelumnya, fotoSesudah, 'sesudah');
     try {
       final hasil = await _db.runTransaction<Laporan?>((tx) async {
         final ref = _koleksi.doc(sebelumnya.id);
@@ -182,7 +189,7 @@ class FirebaseLaporanRepository implements LaporanRepository {
       if (hasil == null) await _bersihkan(paths);
       return hasil;
     } catch (_) {
-      await _bersihkan(paths);
+      // Foto tetap lokal jika respons server terputus.
       rethrow;
     }
   }

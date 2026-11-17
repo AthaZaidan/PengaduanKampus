@@ -3,14 +3,20 @@ import 'package:flutter/material.dart';
 import '../../models/app_user.dart';
 import '../../models/laporan.dart';
 import '../../providers/laporan_provider.dart';
-import '../../widgets/komponen_kampus.dart';
+import '../../theme/app_theme.dart';
+import '../../widgets/sla_chip.dart';
 import '../shared/detail_laporan_page.dart';
 import '../shared/notifikasi_page.dart';
 
+/// Tata letak dari AlhamSaragih, feature/pembaruan-ui (d63ebe2, 454065a).
+/// Beranda admin fasilitas: antrean kerja (verifikasi, penugasan, SLA).
 class AdminDashboardPage extends StatelessWidget {
   final LaporanProvider provider;
   final AppUser user;
+
+  /// Pindah ke tab "Laporan" pada navigasi bawah.
   final VoidCallback onLihatSemua;
+
   const AdminDashboardPage({
     super.key,
     required this.provider,
@@ -19,155 +25,445 @@ class AdminDashboardPage extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) => ListenableBuilder(
-    listenable: provider,
-    builder: (context, _) {
-      final scheme = Theme.of(context).colorScheme;
-      final semua = provider.untuk(user);
-      int hitung(StatusLaporan s) => semua.where((l) => l.status == s).length;
-      final verifikasi = hitung(StatusLaporan.menunggu);
-      final penugasan = hitung(StatusLaporan.diverifikasi);
-      final ditangani =
-          hitung(StatusLaporan.ditugaskan) + hitung(StatusLaporan.diproses);
-      final terlambat = semua.where((l) => l.aktif && l.melewatiSla).length;
-      final antrean =
-          semua
-              .where(
-                (l) =>
-                    l.status == StatusLaporan.menunggu ||
-                    l.status == StatusLaporan.diverifikasi,
-              )
-              .toList()
-            ..sort((a, b) {
-              final p = b.prioritas.index.compareTo(a.prioritas.index);
-              return p != 0 ? p : a.tanggalLapor.compareTo(b.tanggalLapor);
-            });
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('Beranda admin'),
-          actions: [
-            IconButton(
-              tooltip: 'Notifikasi',
-              icon: const Icon(Icons.notifications_outlined),
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) =>
-                      NotifikasiPage(provider: provider, user: user),
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-          ],
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: provider,
+      builder: (context, _) => _buildContent(context),
+    );
+  }
+
+  Widget _buildContent(BuildContext context) {
+    final semua = provider.untuk(user);
+
+    int hitung(StatusLaporan s) => semua.where((l) => l.status == s).length;
+    final perluVerifikasi = hitung(StatusLaporan.menunggu);
+    final perluDitugaskan = hitung(StatusLaporan.diverifikasi);
+    final dikerjakan =
+        hitung(StatusLaporan.ditugaskan) + hitung(StatusLaporan.diproses);
+    final lewatSla = semua.where((l) => l.aktif && l.melewatiSla).length;
+
+    // Antrian: laporan yang butuh tindakan admin, prioritas tinggi & terlama dulu.
+    final antrian =
+        semua
+            .where(
+              (l) =>
+                  l.status == StatusLaporan.menunggu ||
+                  l.status == StatusLaporan.diverifikasi,
+            )
+            .toList()
+          ..sort((a, b) {
+            final p = b.prioritas.index.compareTo(a.prioritas.index);
+            return p != 0 ? p : a.tanggalLapor.compareTo(b.tanggalLapor);
+          });
+
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        title: const Text(
+          'Beranda Admin Fasilitas',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
         ),
-        body: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
-          children: [
-            Text(
-              'ADMINISTRASI FASILITAS',
-              style: TextStyle(
-                fontSize: 10,
-                letterSpacing: 1.5,
-                fontWeight: FontWeight.w600,
-                color: scheme.onSurfaceVariant,
+        backgroundColor: AppColors.forestGreen,
+        foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications_outlined, color: Colors.white),
+            tooltip: 'Notifikasi',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => NotifikasiPage(provider: provider, user: user),
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Selamat datang, ${user.nama}',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              verifikasi + penugasan == 0
-                  ? 'Seluruh laporan sudah ditindaklanjuti.'
-                  : '${verifikasi + penugasan} laporan memerlukan verifikasi atau penugasan.',
-              style: TextStyle(
-                fontSize: 13,
-                height: 1.6,
-                color: scheme.onSurfaceVariant,
+          ),
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // Kartu sambutan adaptasi desain Alham
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              gradient: const LinearGradient(
+                colors: [AppColors.deepForest, AppColors.forestGreen],
               ),
-            ),
-            const SizedBox(height: 24),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final width = (constraints.maxWidth - 12) / 2;
-                return Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: [
-                    SizedBox(
-                      width: width,
-                      child: RingkasanAngka(
-                        label: 'Perlu verifikasi',
-                        angka: verifikasi,
-                        ikon: StatusLaporan.menunggu.icon,
-                        warna: StatusLaporan.menunggu.color,
-                      ),
-                    ),
-                    SizedBox(
-                      width: width,
-                      child: RingkasanAngka(
-                        label: 'Perlu ditugaskan',
-                        angka: penugasan,
-                        ikon: StatusLaporan.diverifikasi.icon,
-                        warna: StatusLaporan.diverifikasi.color,
-                      ),
-                    ),
-                    SizedBox(
-                      width: width,
-                      child: RingkasanAngka(
-                        label: 'Sedang ditangani',
-                        angka: ditangani,
-                        ikon: StatusLaporan.diproses.icon,
-                        warna: StatusLaporan.diproses.color,
-                      ),
-                    ),
-                    SizedBox(
-                      width: width,
-                      child: RingkasanAngka(
-                        label: 'Melewati SLA',
-                        angka: terlambat,
-                        ikon: Icons.timer_off_outlined,
-                        warna: StatusLaporan.ditolak.color,
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
-            const SizedBox(height: 22),
-            JudulBagian(
-              'Perlu tindakan',
-              aksi: 'Lihat semua',
-              onAksi: onLihatSemua,
-            ),
-            const SizedBox(height: 10),
-            if (antrean.isEmpty)
-              const Card(
-                child: KeadaanKosong(
-                  judul: 'Antrean sudah ditangani',
-                  keterangan: 'Laporan baru yang memerlukan verifikasi akan muncul di sini.',
-                  ikon: Icons.task_alt,
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.deepForest.withValues(alpha: 0.12),
+                  blurRadius: 14,
+                  offset: const Offset(0, 4),
                 ),
-              )
-            else
-              for (final l in antrean.take(6))
-                KartuLaporan(
-                  laporan: l,
-                  tampilkanInternal: true,
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => DetailLaporanPage(
-                        laporan: l,
-                        provider: provider,
-                        user: user,
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.18),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.admin_panel_settings_outlined,
+                    color: Colors.white,
+                    size: 32,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Selamat datang, ${user.nama}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
+                      const SizedBox(height: 3),
+                      Text(
+                        perluVerifikasi + perluDitugaskan == 0
+                            ? 'Tidak ada laporan yang menunggu verifikasi atau penugasan.'
+                            : '${perluVerifikasi + perluDitugaskan} laporan butuh penanganan segera.',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.88),
+                          fontSize: 12.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // 2x2 Antrian Cards
+          Row(
+            children: [
+              Expanded(
+                child: _Antrian(
+                  nilai: perluVerifikasi,
+                  label: 'Perlu Verifikasi',
+                  ikon: StatusLaporan.menunggu.icon,
+                  warna: StatusLaporan.menunggu.color,
+                  latar: StatusLaporan.menunggu.backgroundColor,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _Antrian(
+                  nilai: perluDitugaskan,
+                  label: 'Perlu Ditugaskan',
+                  ikon: StatusLaporan.diverifikasi.icon,
+                  warna: StatusLaporan.diverifikasi.color,
+                  latar: StatusLaporan.diverifikasi.backgroundColor,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: _Antrian(
+                  nilai: dikerjakan,
+                  label: 'Sedang Ditangani',
+                  ikon: StatusLaporan.diproses.icon,
+                  warna: StatusLaporan.diproses.color,
+                  latar: StatusLaporan.diproses.backgroundColor,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _Antrian(
+                  nilai: lewatSla,
+                  label: 'Lewat Batas SLA',
+                  ikon: Icons.timer_off_outlined,
+                  warna: AppColors.statusDitolak,
+                  latar: AppColors.statusDitolakBg,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 22),
+
+          // Header Section Perlu Tindakan
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 16,
+            runSpacing: 4,
+            children: [
+              const Text(
+                'Perlu Tindakan Cepat',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.deepForest,
+                ),
+              ),
+              TextButton(
+                onPressed: onLihatSemua,
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.forestGreen,
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Semua Laporan',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    SizedBox(width: 2),
+                    Icon(Icons.arrow_forward, size: 16),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          if (antrian.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(28),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.borderSubtle),
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.softSage.withValues(alpha: 0.4),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.task_alt,
+                      size: 38,
+                      color: AppColors.forestGreen,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    'Semua laporan sudah ditindaklanjuti',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.deepForest,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            for (final l in antrian.take(6))
+              _BarisAntrian(
+                laporan: l,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => DetailLaporanPage(
+                      laporan: l,
+                      provider: provider,
+                      user: user,
                     ),
                   ),
                 ),
-          ],
+              ),
+          const SizedBox(height: 40),
+        ],
+      ),
+    );
+  }
+}
+
+class _Antrian extends StatelessWidget {
+  final int nilai;
+  final String label;
+  final IconData ikon;
+  final Color warna;
+  final Color latar;
+
+  const _Antrian({
+    required this.nilai,
+    required this.label,
+    required this.ikon,
+    required this.warna,
+    required this.latar,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.borderSubtle, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.deepForest.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(14),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: latar,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(ikon, color: warna, size: 22),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '$nilai',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.deepForest,
+                  ),
+                ),
+                Text(
+                  label,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.textSecondary,
+                    height: 1.2,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BarisAntrian extends StatelessWidget {
+  final Laporan laporan;
+  final VoidCallback onTap;
+
+  const _BarisAntrian({required this.laporan, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final aksi = laporan.status == StatusLaporan.menunggu
+        ? 'Perlu diverifikasi'
+        : 'Perlu ditugaskan';
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppColors.borderSubtle, width: 1),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: laporan.status.backgroundColor,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  laporan.status.icon,
+                  color: laporan.status.color,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      laporan.judul,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                        color: AppColors.deepForest,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '$aksi \u2022 ${laporan.lokasi}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        // Prioritas: dot indicator + teks (tanpa pill latar)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 7,
+                              height: 7,
+                              decoration: BoxDecoration(
+                                color: laporan.prioritas.color,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              laporan.prioritas.label,
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w600,
+                                color: laporan.prioritas.color,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SlaChip(laporan: laporan),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: AppColors.textMuted),
+            ],
+          ),
         ),
-      );
-    },
-  );
+      ),
+    );
+  }
 }

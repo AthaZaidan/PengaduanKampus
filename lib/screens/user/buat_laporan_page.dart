@@ -8,7 +8,7 @@ import '../../models/app_user.dart';
 import '../../models/laporan.dart';
 import '../../providers/laporan_provider.dart';
 import '../../widgets/foto_viewer.dart';
-import '../../widgets/foto_storage.dart';
+import '../../widgets/foto_lokal.dart';
 import '../../widgets/pilihan_lokasi.dart';
 import '../../services/fitur_laporan_service.dart';
 import '../../services/laporan_repository.dart';
@@ -129,7 +129,9 @@ class _BuatLaporanPageState extends State<BuatLaporanPage>
           .simpanDraf(data)
           .then((_) {
             if (mounted && versi == _versiDraf && !_terkirim) {
-              setState(() => _pesanDraf = 'Draf tersimpan di Firebase.');
+              setState(
+                () => _pesanDraf = 'Draf teks tersimpan di Firebase; foto tersimpan di perangkat.',
+              );
             }
           })
           .catchError((Object e) {
@@ -209,7 +211,7 @@ class _BuatLaporanPageState extends State<BuatLaporanPage>
       if (!mounted) return;
       if (_draf != null) {
         setState(() => _unggahFoto = true);
-        final path = await _draf!.uploadDraf(bytes);
+        final path = await _draf!.simpanFotoDraf(bytes);
         if (!mounted) return;
         setState(() {
           _fotoPaths.add(path);
@@ -386,7 +388,7 @@ class _BuatLaporanPageState extends State<BuatLaporanPage>
     return PopScope(
       canPop: !_isLoading && !_unggahFoto && !_memuatDraf,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF5F7FA),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
           title: const Text(
             'Buat Laporan',
@@ -408,7 +410,7 @@ class _BuatLaporanPageState extends State<BuatLaporanPage>
                     padding: const EdgeInsets.only(bottom: 12),
                     child: Text(
                       _unggahFoto
-                          ? 'Mengunggah foto draf...'
+                          ? 'Menyimpan foto di perangkat...'
                           : _pesanDraf ??
                                 'Isi form disimpan otomatis sebagai draf.',
                       style: const TextStyle(fontSize: 12),
@@ -553,7 +555,7 @@ class _BuatLaporanPageState extends State<BuatLaporanPage>
                 _buildSectionLabel('Foto Lampiran (opsional)'),
                 const SizedBox(height: 2),
                 Text(
-                  'Tambahkan hingga $_maxFoto foto agar kerusakan lebih jelas.',
+                  'Maksimal $_maxFoto foto. Foto hanya tersimpan di perangkat ini dan tidak dikirim ke perangkat admin/teknisi.',
                   style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
                 ),
                 const SizedBox(height: 8),
@@ -583,7 +585,7 @@ class _BuatLaporanPageState extends State<BuatLaporanPage>
                   const Padding(
                     padding: EdgeInsets.only(bottom: 12),
                     child: Text(
-                      'Mengunggah foto dan menyimpan laporan ke Firebase?',
+                      'Simpan laporan ke Firebase? Foto tetap disimpan di perangkat ini.',
                     ),
                   ),
                 // Submit Button
@@ -685,7 +687,7 @@ class _FotoPicker extends StatelessWidget {
                         height: _ukuran,
                         child: i < foto.length
                             ? Image.memory(foto[i], fit: BoxFit.cover)
-                            : FotoStorage(
+                            : FotoLokal(
                                 path: paths[i - foto.length],
                                 fit: BoxFit.cover,
                               ),

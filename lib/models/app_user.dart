@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../theme/palet_kampus.dart';
+
 /// Peran pengguna. Mahasiswa, dosen, dan staf memakai hak akses yang sama
 /// (pelapor); admin fasilitas dan teknisi punya hak akses sendiri.
 enum PeranPengguna { mahasiswa, dosen, staf, admin, teknisi }
@@ -60,7 +62,7 @@ extension PeranPenggunaExt on PeranPengguna {
 
   /// Warna identitas kampus, konsisten untuk setiap peran.
   Color get warna {
-    return const Color(0xFF203B5C);
+    return AppColors.forestGreen;
   }
 }
 

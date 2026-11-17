@@ -8,7 +8,7 @@ import '../../models/laporan.dart';
 import '../../providers/laporan_provider.dart';
 import '../../widgets/foto_picker_field.dart';
 import '../../widgets/foto_viewer.dart';
-import '../../widgets/foto_storage.dart';
+import '../../widgets/foto_lokal.dart';
 import '../../widgets/komentar_laporan.dart';
 import '../../services/laporan_repository.dart';
 
@@ -254,7 +254,7 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
                 ),
                 const SizedBox(height: 14),
                 Text(
-                  'Foto sesudah penanganan (opsional)',
+                  'Foto sesudah penanganan (opsional, hanya di perangkat ini)',
                   style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                 ),
                 const SizedBox(height: 8),
@@ -483,7 +483,7 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Detail laporan'),
         backgroundColor: scheme.surface,
@@ -1022,6 +1022,11 @@ class _FotoCard extends StatelessWidget {
                 ),
               ],
             ),
+            const SizedBox(height: 8),
+            const Text(
+              'Foto hanya tersedia pada perangkat tempat foto disimpan.',
+              style: TextStyle(fontSize: 12),
+            ),
             const SizedBox(height: 12),
             SizedBox(
               height: 96,
@@ -1038,7 +1043,7 @@ class _FotoCard extends StatelessWidget {
                       height: 96,
                       child: i < foto.length
                           ? Image.memory(foto[i], fit: BoxFit.cover)
-                          : FotoStorage(
+                          : FotoLokal(
                               path: paths[i - foto.length],
                               fit: BoxFit.cover,
                             ),

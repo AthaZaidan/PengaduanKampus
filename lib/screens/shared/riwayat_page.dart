@@ -205,7 +205,7 @@ class _RiwayatPageState extends State<RiwayatPage>
     final sumber = widget.provider.untuk(widget.user);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
           widget.judul,
