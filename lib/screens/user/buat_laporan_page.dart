@@ -11,6 +11,7 @@ import '../../widgets/foto_viewer.dart';
 import '../../widgets/foto_lokal.dart';
 import '../../widgets/pilihan_lokasi.dart';
 import '../../services/fitur_laporan_service.dart';
+import '../../services/foto_firestore_service.dart';
 import '../../services/laporan_repository.dart';
 
 class BuatLaporanPage extends StatefulWidget {
@@ -130,7 +131,7 @@ class _BuatLaporanPageState extends State<BuatLaporanPage>
           .then((_) {
             if (mounted && versi == _versiDraf && !_terkirim) {
               setState(
-                () => _pesanDraf = 'Draf teks tersimpan di Firebase; foto tersimpan di perangkat.',
+                () => _pesanDraf = 'Draf tersimpan otomatis. Foto dikirim ke Firebase saat laporan dikirim.',
               );
             }
           })
@@ -202,12 +203,14 @@ class _BuatLaporanPageState extends State<BuatLaporanPage>
     try {
       final picked = await _picker.pickImage(
         source: source,
-        maxWidth: 1280,
-        imageQuality: 75,
+        maxWidth: FotoFirestoreService.lebarMaks.toDouble(),
+        maxHeight: FotoFirestoreService.lebarMaks.toDouble(),
+        imageQuality: FotoFirestoreService.kualitas,
       );
       if (picked == null) return;
 
       final bytes = await picked.readAsBytes();
+      FotoFirestoreService.validasi(bytes);
       if (!mounted) return;
       if (_draf != null) {
         setState(() => _unggahFoto = true);
@@ -227,15 +230,15 @@ class _BuatLaporanPageState extends State<BuatLaporanPage>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           behavior: SnackBarBehavior.floating,
-          backgroundColor: const Color(0xFFAC3838),
+          backgroundColor: const Color(0xFFB84A4A),
           margin: const EdgeInsets.all(16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
           content: Text(
-            _draf == null
-                ? 'Gagal mengambil foto. Periksa izin kamera/galeri.'
-                : pesanGalatFirebase(error),
+            error is StateError || _draf != null
+                ? pesanGalatFirebase(error)
+                : 'Gagal mengambil foto. Periksa izin kamera/galeri.',
             style: TextStyle(color: Colors.white),
           ),
         ),
@@ -359,7 +362,7 @@ class _BuatLaporanPageState extends State<BuatLaporanPage>
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         behavior: SnackBarBehavior.floating,
-        backgroundColor: const Color(0xFF257054),
+        backgroundColor: const Color(0xFF406E49),
         margin: const EdgeInsets.all(16),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         content: Row(
@@ -410,7 +413,7 @@ class _BuatLaporanPageState extends State<BuatLaporanPage>
                     padding: const EdgeInsets.only(bottom: 12),
                     child: Text(
                       _unggahFoto
-                          ? 'Menyimpan foto di perangkat...'
+                          ? 'Menyiapkan foto...'
                           : _pesanDraf ??
                                 'Isi form disimpan otomatis sebagai draf.',
                       style: const TextStyle(fontSize: 12),
@@ -555,7 +558,7 @@ class _BuatLaporanPageState extends State<BuatLaporanPage>
                 _buildSectionLabel('Foto Lampiran (opsional)'),
                 const SizedBox(height: 2),
                 Text(
-                  'Maksimal $_maxFoto foto. Foto hanya tersimpan di perangkat ini dan tidak dikirim ke perangkat admin/teknisi.',
+                  'Maksimal $_maxFoto foto. Foto dikompres lalu dikirim bersama laporan dan dapat dilihat admin serta teknisi yang menangani.',
                   style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
                 ),
                 const SizedBox(height: 8),
@@ -585,7 +588,7 @@ class _BuatLaporanPageState extends State<BuatLaporanPage>
                   const Padding(
                     padding: EdgeInsets.only(bottom: 12),
                     child: Text(
-                      'Simpan laporan ke Firebase? Foto tetap disimpan di perangkat ini.',
+                      'Mengirim laporan dan foto ke Firebase...',
                     ),
                   ),
                 // Submit Button

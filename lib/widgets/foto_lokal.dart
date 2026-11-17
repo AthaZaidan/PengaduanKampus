@@ -1,10 +1,12 @@
 import 'dart:typed_data';
 
+import '../services/foto_firestore_service.dart';
 import '../services/foto_lokal_service.dart';
 
 import 'package:flutter/material.dart';
 
-/// Membaca lampiran lokal; path relatif di Firestore bukan berkas foto.
+/// Menampilkan lampiran: foto laporan dibaca dari Firestore (base64 → gambar),
+/// sedangkan foto draf yang belum dikirim dibaca dari penyimpanan perangkat.
 class FotoLokal extends StatefulWidget {
   final String path;
   final BoxFit fit;
@@ -23,7 +25,9 @@ class _FotoLokalState extends State<FotoLokal> {
   }
 
   void _muat() {
-    _foto = FotoLokalService.instance.baca(widget.path);
+    _foto = FotoFirestoreService.adalahPathFirestore(widget.path)
+        ? FotoFirestoreService.instance.baca(widget.path)
+        : FotoLokalService.instance.baca(widget.path);
   }
 
   @override
@@ -47,7 +51,7 @@ class _FotoLokalState extends State<FotoLokal> {
                 Icon(Icons.photo_outlined),
                 SizedBox(height: 4),
                 Text(
-                  'Foto tidak tersedia di perangkat ini',
+                  'Foto tidak tersedia',
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 10),
                 ),

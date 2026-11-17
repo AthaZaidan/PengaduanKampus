@@ -54,7 +54,7 @@ class _TambahTeknisiPageState extends State<TambahTeknisiPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(pesan),
-        backgroundColor: error ? Colors.red.shade700 : const Color(0xFF257054),
+        backgroundColor: error ? const Color(0xFFB84A4A) : const Color(0xFF406E49),
         behavior: SnackBarBehavior.floating,
       ),
     );

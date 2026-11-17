@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 
 import 'firebase_options.dart';
-import 'screens/authentication/login_page.dart';
+import 'screens/splash_screen.dart';
 import 'theme/tema_kampus.dart';
 
 void main() async {
@@ -22,7 +22,7 @@ class PengaduanKampusApp extends StatelessWidget {
       title: 'Pengaduan Kampus',
       debugShowCheckedModeBanner: false,
       theme: TemaKampus.bangun(),
-      home: const LoginPage(),
+      home: const SplashScreen(),
     );
   }
 }

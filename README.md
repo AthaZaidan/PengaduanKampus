@@ -3,7 +3,7 @@
 Aplikasi mobile berbasis Flutter untuk sistem pelaporan dan pengaduan fasilitas atau layanan di lingkungan kampus.
  Fitur Utama (Rencana Pengembangan)
 - **Autentikasi**: Login & Registrasi mahasiswa/staf
-- **Buat Laporan**: Form pengaduan dengan deskripsi, kategori, dan lampiran foto lokal (tersimpan pada perangkat masing-masing)
+- **Buat Laporan**: Form pengaduan dengan deskripsi, kategori, dan lampiran foto (dikompres, diubah menjadi base64, dan disimpan di Firestore pada `laporan/{id}/foto`)
 - **Status Laporan**: Pemantauan progres penanganan pengaduan (Diajukan, Diproses, Selesai)
 - **Riwayat Pengaduan**: Riwayat laporan yang telah diajukan pengguna
 

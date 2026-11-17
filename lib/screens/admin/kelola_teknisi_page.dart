@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../models/app_user.dart';
 import '../../models/laporan.dart';
 import '../../providers/laporan_provider.dart';
+import '../../services/akun_service.dart';
 import 'tambah_teknisi_page.dart';
 
 /// Admin: daftar akun teknisi + tombol untuk menambah akun baru.
@@ -106,7 +107,22 @@ class KelolaTeknisiPage extends StatelessWidget {
                     ),
                     for (final t in daftar)
                       _KartuTeknisi(
+                        admin: user,
                         teknisi: t,
+                        tugasDitugaskan: provider.laporanList
+                            .where(
+                              (l) =>
+                                  l.teknisiId == t.uid &&
+                                  l.status == StatusLaporan.ditugaskan,
+                            )
+                            .length,
+                        tugasDiproses: provider.laporanList
+                            .where(
+                              (l) =>
+                                  l.teknisiId == t.uid &&
+                                  l.status == StatusLaporan.diproses,
+                            )
+                            .length,
                         tugasAktif: provider.laporanList
                             .where((l) => l.teknisiId == t.uid && l.aktif)
                             .length,
@@ -156,15 +172,80 @@ class _Pesan extends StatelessWidget {
 }
 
 class _KartuTeknisi extends StatelessWidget {
+  final AppUser admin;
   final AppUser teknisi;
   final int tugasAktif;
   final int tugasSelesai;
+  final int tugasDitugaskan;
+  final int tugasDiproses;
 
   const _KartuTeknisi({
+    required this.admin,
     required this.teknisi,
     required this.tugasAktif,
     required this.tugasSelesai,
+    required this.tugasDitugaskan,
+    required this.tugasDiproses,
   });
+
+  Future<void> _hapus(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+
+    // Tugas yang sedang dikerjakan tidak bisa dialihkan admin, jadi hapus ditahan.
+    if (tugasDiproses > 0) {
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Teknisi belum dapat dihapus'),
+          content: Text(
+            '${teknisi.nama} masih mengerjakan $tugasDiproses laporan. '
+            'Tunggu sampai laporan tersebut selesai, lalu coba lagi.',
+          ),
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Mengerti'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    final yakin = await showDialog<bool>(
+      context: context,
+      builder: (_) => _DialogHapusTeknisi(
+        nama: teknisi.nama,
+        tugasDitugaskan: tugasDitugaskan,
+      ),
+    );
+    if (yakin != true) return;
+
+    try {
+      await AkunService.hapusTeknisi(pembuat: admin, teknisi: teknisi);
+      messenger.showSnackBar(
+        SnackBar(content: Text('Teknisi ${teknisi.nama} telah dihapus.')),
+      );
+    } on FirebaseException catch (e) {
+      messenger.showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFFB84A4A),
+          content: Text(
+            e.code == 'permission-denied'
+                ? 'Akses ditolak. Pastikan aturan Firestore terbaru sudah dipublikasikan.'
+                : 'Gagal menghapus teknisi. Periksa koneksi lalu coba lagi.',
+          ),
+        ),
+      );
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFFB84A4A),
+          content: Text('Gagal menghapus teknisi: $e'),
+        ),
+      );
+    }
+  }
 
   static String _inisial(String nama) {
     final kata = nama
@@ -184,7 +265,7 @@ class _KartuTeknisi extends StatelessWidget {
       messenger.showSnackBar(
         SnackBar(
           content: Text('Tautan reset password dikirim ke ${teknisi.email}.'),
-          backgroundColor: const Color(0xFF257054),
+          backgroundColor: const Color(0xFF406E49),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -192,7 +273,7 @@ class _KartuTeknisi extends StatelessWidget {
       messenger.showSnackBar(
         SnackBar(
           content: Text('Gagal mengirim tautan reset: $e'),
-          backgroundColor: const Color(0xFFAC3838),
+          backgroundColor: const Color(0xFFB84A4A),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -265,7 +346,7 @@ class _KartuTeknisi extends StatelessWidget {
                       ),
                       _Lencana(
                         teks: '$tugasSelesai selesai',
-                        warna: const Color(0xFF257054),
+                        warna: const Color(0xFF406E49),
                       ),
                     ],
                   ),
@@ -276,11 +357,19 @@ class _KartuTeknisi extends StatelessWidget {
               tooltip: 'Aksi',
               onSelected: (v) {
                 if (v == 'reset') _kirimReset(context);
+                if (v == 'hapus') _hapus(context);
               },
               itemBuilder: (_) => const [
                 PopupMenuItem(
                   value: 'reset',
                   child: Text('Kirim reset password'),
+                ),
+                PopupMenuItem(
+                  value: 'hapus',
+                  child: Text(
+                    'Hapus teknisi',
+                    style: TextStyle(color: Color(0xFFB84A4A)),
+                  ),
                 ),
               ],
             ),
@@ -313,6 +402,83 @@ class _Lencana extends StatelessWidget {
           color: warna,
         ),
       ),
+    );
+  }
+}
+
+/// Peringatan hapus: tombol hapus baru aktif setelah admin mengetik "HAPUS".
+class _DialogHapusTeknisi extends StatefulWidget {
+  final String nama;
+  final int tugasDitugaskan;
+
+  const _DialogHapusTeknisi({required this.nama, required this.tugasDitugaskan});
+
+  @override
+  State<_DialogHapusTeknisi> createState() => _DialogHapusTeknisiState();
+}
+
+class _DialogHapusTeknisiState extends State<_DialogHapusTeknisi> {
+  static const _merah = Color(0xFFB84A4A);
+  final _kontrol = TextEditingController();
+
+  @override
+  void dispose() {
+    _kontrol.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cocok = _kontrol.text.trim().toUpperCase() == 'HAPUS';
+    return AlertDialog(
+      icon: const Icon(Icons.warning_amber_rounded, color: _merah, size: 32),
+      title: const Text('Hapus teknisi?'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '${widget.nama} akan dihapus dari daftar teknisi dan tidak dapat '
+              'masuk ke aplikasi lagi. Tindakan ini tidak dapat dibatalkan.',
+              style: const TextStyle(height: 1.5),
+            ),
+            if (widget.tugasDitugaskan > 0) ...[
+              const SizedBox(height: 12),
+              Text(
+                'Masih ada ${widget.tugasDitugaskan} laporan yang ditugaskan '
+                'kepadanya. Tugaskan ulang laporan tersebut ke teknisi lain.',
+                style: const TextStyle(
+                  height: 1.5,
+                  color: Color(0xFF8A641E),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+            const SizedBox(height: 16),
+            const Text('Ketik HAPUS untuk melanjutkan:'),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _kontrol,
+              autofocus: true,
+              textCapitalization: TextCapitalization.characters,
+              onChanged: (_) => setState(() {}),
+              decoration: const InputDecoration(hintText: 'HAPUS'),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text('Batal'),
+        ),
+        FilledButton(
+          style: FilledButton.styleFrom(backgroundColor: _merah),
+          onPressed: cocok ? () => Navigator.pop(context, true) : null,
+          child: const Text('Hapus teknisi'),
+        ),
+      ],
     );
   }
 }

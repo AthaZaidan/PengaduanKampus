@@ -73,7 +73,7 @@ class _LoginPageState extends State<LoginPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(message),
-          backgroundColor: Colors.red.shade700,
+          backgroundColor: const Color(0xFFB84A4A),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -82,7 +82,7 @@ class _LoginPageState extends State<LoginPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error: ${e.toString()}'),
-          backgroundColor: Colors.red.shade700,
+          backgroundColor: const Color(0xFFB84A4A),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -142,7 +142,7 @@ class _LoginPageState extends State<LoginPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Login Google Gagal: ${e.toString()}'),
-          backgroundColor: Colors.red.shade700,
+          backgroundColor: const Color(0xFFB84A4A),
           behavior: SnackBarBehavior.floating,
         ),
       );

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/tema_kampus.dart';
 
-/// Lambang geometris milik aplikasi, bukan lambang resmi suatu universitas.
+/// Logo aplikasi (assets/branding/logo_tile.png), bukan lambang resmi suatu universitas.
 class LambangKampus extends StatelessWidget {
   final double ukuran;
   const LambangKampus({super.key, this.ukuran = 56});
@@ -10,9 +10,11 @@ class LambangKampus extends StatelessWidget {
   Widget build(BuildContext context) => Semantics(
     label: 'Pengaduan Kampus',
     image: true,
-    child: SizedBox.square(
-      dimension: ukuran,
-      child: const CustomPaint(painter: LambangKampusPainter()),
+    child: Image.asset(
+      'assets/branding/logo_tile.png',
+      width: ukuran,
+      height: ukuran,
+      filterQuality: FilterQuality.medium,
     ),
   );
 }
@@ -20,12 +22,15 @@ class LambangKampus extends StatelessWidget {
 /// Kanvas yang sama digunakan untuk ikon launcher dan identitas di dalam aplikasi.
 class LambangKampusPainter extends CustomPainter {
   final bool latarPenuh;
-  const LambangKampusPainter({this.latarPenuh = false});
+  final bool terbalik;
+  const LambangKampusPainter({this.latarPenuh = false, this.terbalik = false});
   @override
   void paint(Canvas canvas, Size size) {
     canvas.save();
     canvas.scale(size.width / 64, size.height / 64);
-    final background = Paint()..color = TemaKampus.utama;
+    final warnaLatar = terbalik ? Colors.white : TemaKampus.utama;
+    final warnaGaris = terbalik ? TemaKampus.utama : Colors.white;
+    final background = Paint()..color = warnaLatar;
     if (latarPenuh) {
       canvas.drawRect(const Rect.fromLTWH(0, 0, 64, 64), background);
     } else {
@@ -38,7 +43,7 @@ class LambangKampusPainter extends CustomPainter {
       );
     }
     final garis = Paint()
-      ..color = Colors.white
+      ..color = warnaGaris
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.4
       ..strokeCap = StrokeCap.square
@@ -60,7 +65,7 @@ class LambangKampusPainter extends CustomPainter {
     canvas.drawCircle(
       const Offset(47, 44),
       10,
-      Paint()..color = TemaKampus.utama,
+      Paint()..color = warnaLatar,
     );
     canvas.drawCircle(
       const Offset(47, 44),
@@ -84,5 +89,5 @@ class LambangKampusPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant LambangKampusPainter oldDelegate) =>
-      oldDelegate.latarPenuh != latarPenuh;
+      oldDelegate.latarPenuh != latarPenuh || oldDelegate.terbalik != terbalik;
 }

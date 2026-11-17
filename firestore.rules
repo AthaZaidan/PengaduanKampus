@@ -23,7 +23,8 @@ service cloud.firestore {
       allow update: if signedIn() && request.auth.uid == uid &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'phone', 'nim']) &&
         request.resource.data.name is string && request.resource.data.name.size() > 0;
-      allow delete: if false;
+      // Admin boleh menghapus profil teknisi (bukan dirinya sendiri / peran lain).
+      allow delete: if admin() && resource.data.role == 'teknisi' && request.auth.uid != uid;
     }
 
     match /users/{uid}/draf/{id} {
@@ -78,6 +79,39 @@ service cloud.firestore {
         request.resource.data.nama.size() <= 150 && request.resource.data.teks is string &&
         request.resource.data.teks.size() > 0 && request.resource.data.teks.size() <= 2000 && request.resource.data.createdAt == request.time;
       allow update, delete: if false;
+    }
+
+    // Foto laporan disimpan sebagai teks base64 (satu foto per dokumen, maks. ±1 MB).
+    match /laporan/{id}/foto/{fotoId} {
+      function induk() { return get(/databases/$(database)/documents/laporan/$(id)).data; }
+      function indukAda() { return exists(/databases/$(database)/documents/laporan/$(id)); }
+      function pathFoto(d) {
+        return 'laporan/' + d.pemilikId + '/' + id + '/' + d.jenis + '/' + d.uploaderId + '/' + fotoId;
+      }
+      function strukturFoto(d) {
+        return d.keys().hasOnly(['data', 'mime', 'jenis', 'pemilikId', 'uploaderId', 'ukuran', 'createdAt']) &&
+          d.data is string && d.data.size() > 0 && d.data.size() <= 1000000 &&
+          d.mime in ['image/jpeg', 'image/png', 'image/webp'] &&
+          d.jenis in ['sebelum', 'sesudah'] && d.ukuran is int &&
+          d.uploaderId == request.auth.uid && d.createdAt == request.time;
+      }
+      allow get: if signedIn() && indukAda() && (admin() || induk().pelaporId == request.auth.uid ||
+        (teknisi() && induk().teknisiId == request.auth.uid));
+      allow list: if false;
+      allow create: if signedIn() && strukturFoto(request.resource.data) && (
+        (request.resource.data.jenis == 'sebelum' && request.resource.data.pemilikId == request.auth.uid &&
+          pelapor() && !indukAda()) ||
+        (request.resource.data.jenis == 'sesudah' && teknisi() && indukAda() &&
+          induk().pelaporId == request.resource.data.pemilikId &&
+          induk().teknisiId == request.auth.uid && induk().status == 'diproses')
+      );
+      allow update: if false;
+      // Hanya foto yang belum dirujuk laporan (sisa unggahan gagal) yang boleh dihapus.
+      allow delete: if signedIn() && resource.data.uploaderId == request.auth.uid && (
+        !indukAda() ||
+        (!(pathFoto(resource.data) in induk().fotoPaths) &&
+          !(pathFoto(resource.data) in induk().fotoSesudahPaths))
+      );
     }
 
     match /laporan/{id} {

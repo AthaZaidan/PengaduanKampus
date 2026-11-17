@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'foto_firestore_service.dart';
 import 'foto_lokal_service.dart';
 
 import '../models/app_user.dart';
@@ -56,17 +57,8 @@ class FiturLaporanService {
       FotoLokalService.instance.hapus(path);
 
   Future<String> simpanFotoDraf(Uint8List bytes) async {
-    if (bytes.isEmpty || bytes.length > 5 * 1024 * 1024) {
-      throw StateError('Foto maksimal 5 MB.');
-    }
-    final png = bytes.length > 4 && bytes[0] == 137 && bytes[1] == 80;
-    final jpg = bytes.length > 3 && bytes[0] == 255 && bytes[1] == 216;
-    final webp =
-        bytes.length > 12 &&
-        String.fromCharCodes(bytes.sublist(8, 12)) == 'WEBP';
-    if (!png && !jpg && !webp) {
-      throw StateError('Gunakan foto JPEG, PNG, atau WebP.');
-    }
+    // Diperiksa sejak dipilih agar foto yang terlalu besar ditolak lebih awal.
+    FotoFirestoreService.validasi(bytes);
     final path = 'draf/$uid/${db.collection('laporan').doc().id}';
     await FotoLokalService.instance.simpan(path, bytes);
     return path;

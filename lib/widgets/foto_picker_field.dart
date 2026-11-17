@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../services/foto_firestore_service.dart';
 import 'foto_viewer.dart';
 
 /// Kotak pemilih foto (kamera / galeri) yang berdiri sendiri.
@@ -61,19 +62,25 @@ class _FotoPickerFieldState extends State<FotoPickerField> {
     try {
       final picked = await _picker.pickImage(
         source: source,
-        maxWidth: 1280,
-        imageQuality: 75,
+        maxWidth: FotoFirestoreService.lebarMaks.toDouble(),
+        maxHeight: FotoFirestoreService.lebarMaks.toDouble(),
+        imageQuality: FotoFirestoreService.kualitas,
       );
       if (picked == null) return;
       final bytes = await picked.readAsBytes();
+      FotoFirestoreService.validasi(bytes);
       if (!mounted) return;
       setState(() => _foto.add(bytes));
       widget.onChanged(List<Uint8List>.of(_foto));
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Gagal mengambil foto. Periksa izin kamera/galeri.'),
+        SnackBar(
+          content: Text(
+            error is StateError
+                ? error.message
+                : 'Gagal mengambil foto. Periksa izin kamera/galeri.',
+          ),
         ),
       );
     }

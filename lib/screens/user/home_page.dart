@@ -76,13 +76,7 @@ class HomePage extends StatelessWidget {
             ),
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [AppColors.forestGreen, AppColors.deepForest],
-                  ),
-                ),
+                color: AppColors.forestGreen,
                 child: SafeArea(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(

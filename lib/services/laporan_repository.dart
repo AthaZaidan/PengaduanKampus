@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import 'foto_firestore_service.dart';
 import 'foto_lokal_service.dart';
 
 import '../models/app_user.dart';
@@ -26,7 +27,8 @@ abstract class LaporanRepository {
 }
 
 /// Transaksi membaca ulang dokumen server dan menolak revisi yang sudah usang.
-/// Foto disalin ke perangkat sebelum transaksi; UI sukses setelah commit server.
+/// Foto diubah menjadi base64 dan disimpan di Firestore sebelum transaksi;
+/// UI sukses setelah commit server.
 class FirebaseLaporanRepository implements LaporanRepository {
   FirebaseFirestore get _db => FirebaseFirestore.instance;
   CollectionReference<Map<String, dynamic>> get _koleksi =>
@@ -60,13 +62,14 @@ class FirebaseLaporanRepository implements LaporanRepository {
     final paths = <String>[];
     try {
       for (final bytes in foto) {
-        if (bytes.isEmpty || bytes.length > 5 * 1024 * 1024) {
-          throw StateError('Ukuran foto harus di bawah 5 MB.');
-        }
+        FotoFirestoreService.validasi(bytes);
         final nama = _koleksi.doc().id;
         final path = 'laporan/${l.pelaporId}/${l.id}/$jenis/$_uid/$nama';
-        _mime(bytes);
-        await FotoLokalService.instance.simpan(path, bytes);
+        await FotoFirestoreService.instance.simpan(
+          path,
+          bytes,
+          uploaderId: _uid,
+        );
         paths.add(path);
       }
       return paths;
@@ -76,29 +79,10 @@ class FirebaseLaporanRepository implements LaporanRepository {
     }
   }
 
-  String _mime(Uint8List b) {
-    if (b.length >= 3 && b[0] == 0xff && b[1] == 0xd8 && b[2] == 0xff) {
-      return 'image/jpeg';
-    }
-    if (b.length >= 8 &&
-        b[0] == 0x89 &&
-        b[1] == 0x50 &&
-        b[2] == 0x4e &&
-        b[3] == 0x47) {
-      return 'image/png';
-    }
-    if (b.length >= 12 &&
-        String.fromCharCodes(b.take(4)) == 'RIFF' &&
-        String.fromCharCodes(b.sublist(8, 12)) == 'WEBP') {
-      return 'image/webp';
-    }
-    throw StateError('Gunakan foto JPEG, PNG, atau WebP.');
-  }
-
   Future<void> _bersihkan(List<String> paths) async {
     for (final path in paths) {
       try {
-        await FotoLokalService.instance.hapus(path);
+        await FotoFirestoreService.instance.hapus(path);
       } catch (_) {
         // Pembersihan bersifat best effort; jangan menutupi galat utama.
       }
@@ -149,11 +133,16 @@ class FirebaseLaporanRepository implements LaporanRepository {
       });
       if (!hasil.fotoPaths.any(paths.contains)) await _bersihkan(paths);
       return hasil;
-    } catch (_) {
-      // Foto tetap lokal jika respons server terputus.
+    } catch (e) {
+      // Bila respons terputus, laporan mungkin sudah masuk; jangan hapus fotonya.
+      if (!_koneksiTerputus(e)) await _bersihkan(paths);
       rethrow;
     }
   }
+
+  bool _koneksiTerputus(Object e) =>
+      e is FirebaseException &&
+      (e.code == 'unavailable' || e.code == 'deadline-exceeded');
 
   @override
   Future<Laporan?> ubah(
@@ -188,8 +177,8 @@ class FirebaseLaporanRepository implements LaporanRepository {
       });
       if (hasil == null) await _bersihkan(paths);
       return hasil;
-    } catch (_) {
-      // Foto tetap lokal jika respons server terputus.
+    } catch (e) {
+      if (!_koneksiTerputus(e)) await _bersihkan(paths);
       rethrow;
     }
   }

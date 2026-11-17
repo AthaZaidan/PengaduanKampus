@@ -86,17 +86,8 @@ class AdminDashboardPage extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
-              gradient: const LinearGradient(
-                colors: [AppColors.deepForest, AppColors.forestGreen],
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.deepForest.withValues(alpha: 0.12),
-                  blurRadius: 14,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+              borderRadius: BorderRadius.circular(12),
+              color: AppColors.forestGreen,
             ),
             child: Row(
               children: [

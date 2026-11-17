@@ -46,8 +46,8 @@ class _ProfilePageState extends State<ProfilePage> {
       SnackBar(
         behavior: SnackBarBehavior.floating,
         backgroundColor: error
-            ? const Color(0xFFAC3838)
-            : const Color(0xFF257054),
+            ? const Color(0xFFB84A4A)
+            : const Color(0xFF406E49),
         margin: const EdgeInsets.all(16),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         content: Text(pesan, style: const TextStyle(color: Colors.white)),
@@ -99,7 +99,7 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(backgroundColor: Colors.red.shade600),
+            style: FilledButton.styleFrom(backgroundColor: const Color(0xFFB84A4A)),
             child: const Text('Keluar'),
           ),
         ],
@@ -483,7 +483,7 @@ class _ProfilePageState extends State<ProfilePage> {
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.shade600,
+              backgroundColor: const Color(0xFFB84A4A),
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(

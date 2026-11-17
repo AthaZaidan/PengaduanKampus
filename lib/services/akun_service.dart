@@ -25,6 +25,27 @@ class AkunService {
     );
   }
 
+  /// Menghapus teknisi: dokumen profil `users/{uid}` dihapus sehingga akun itu
+  /// tidak lagi bisa masuk ke aplikasi dan hilang dari daftar penugasan.
+  ///
+  /// Catatan: akun Firebase Auth tidak dapat dihapus dari aplikasi klien (perlu
+  /// Admin SDK / Firebase Console), jadi email tersebut tetap terdaftar di Auth.
+  static Future<void> hapusTeknisi({
+    required AppUser pembuat,
+    required AppUser teknisi,
+  }) async {
+    if (!pembuat.peran.isAdmin) {
+      throw StateError('Hanya admin yang dapat menghapus teknisi.');
+    }
+    if (!teknisi.peran.isTeknisi) {
+      throw StateError('Akun ini bukan teknisi.');
+    }
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(teknisi.uid)
+        .delete();
+  }
+
   /// Membuat akun Firebase Auth + dokumen `users/{uid}` dengan role `teknisi`.
   /// Mengembalikan uid akun baru.
   ///

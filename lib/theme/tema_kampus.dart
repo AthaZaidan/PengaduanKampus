@@ -195,8 +195,24 @@ class TemaKampus {
       dividerTheme: const DividerThemeData(color: garis, thickness: 1),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
+        backgroundColor: tinta,
+        contentTextStyle: const TextStyle(
+          fontFamily: 'Roboto',
+          fontSize: 13,
+          color: Colors.white,
+        ),
         shape: bentuk,
       ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+      ),
+      progressIndicatorTheme: const ProgressIndicatorThemeData(color: utama),
     );
   }
 }

@@ -48,7 +48,7 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
       }
       return ok;
     } catch (error) {
-      _snack(pesanGalatFirebase(error), Colors.red);
+      _snack(pesanGalatFirebase(error), const Color(0xFFB84A4A));
       return false;
     } finally {
       if (mounted) setState(() => _menyimpan = false);
@@ -254,7 +254,7 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
                 ),
                 const SizedBox(height: 14),
                 Text(
-                  'Foto sesudah penanganan (opsional, hanya di perangkat ini)',
+                  'Foto sesudah penanganan (opsional)',
                   style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                 ),
                 const SizedBox(height: 8),
@@ -677,7 +677,7 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
                 ),
-                color: const Color(0xFF257054).withValues(alpha: 0.06),
+                color: const Color(0xFF406E49).withValues(alpha: 0.06),
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
@@ -688,14 +688,14 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
                           const Icon(
                             Icons.comment_outlined,
                             size: 18,
-                            color: Color(0xFF257054),
+                            color: Color(0xFF406E49),
                           ),
                           const SizedBox(width: 8),
                           const Text(
                             'Catatan Penanganan',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF257054),
+                              color: Color(0xFF406E49),
                               fontSize: 14,
                             ),
                           ),
@@ -1021,11 +1021,6 @@ class _FotoCard extends StatelessWidget {
                   ),
                 ),
               ],
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Foto hanya tersedia pada perangkat tempat foto disimpan.',
-              style: TextStyle(fontSize: 12),
             ),
             const SizedBox(height: 12),
             SizedBox(
