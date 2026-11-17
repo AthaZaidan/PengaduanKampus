@@ -29,7 +29,7 @@ AppUser _user(String uid, PeranPengguna peran) =>
 
 void main() {
   group('AppUser.peranDariKode', () {
-    test('memetakan nilai role dari Firestore', () {
+    test('memetakan nilai role dari Firestore', () async {
       expect(AppUser.peranDariKode('admin'), PeranPengguna.admin);
       expect(AppUser.peranDariKode(' Teknisi '), PeranPengguna.teknisi);
       expect(AppUser.peranDariKode('dosen'), PeranPengguna.dosen);
@@ -37,13 +37,16 @@ void main() {
       expect(AppUser.peranDariKode('mahasiswa'), PeranPengguna.mahasiswa);
     });
 
-    test('nilai lama "student", kosong, atau tak dikenal = mahasiswa', () {
-      expect(AppUser.peranDariKode('student'), PeranPengguna.mahasiswa);
-      expect(AppUser.peranDariKode(null), PeranPengguna.mahasiswa);
-      expect(AppUser.peranDariKode('apa-saja'), PeranPengguna.mahasiswa);
-    });
+    test(
+      'nilai lama "student", kosong, atau tak dikenal = mahasiswa',
+      () async {
+        expect(AppUser.peranDariKode('student'), PeranPengguna.mahasiswa);
+        expect(AppUser.peranDariKode(null), PeranPengguna.mahasiswa);
+        expect(AppUser.peranDariKode('apa-saja'), PeranPengguna.mahasiswa);
+      },
+    );
 
-    test('kelompok peran', () {
+    test('kelompok peran', () async {
       expect(PeranPengguna.dosen.isPelapor, isTrue);
       expect(PeranPengguna.staf.isPelapor, isTrue);
       expect(PeranPengguna.admin.isPelapor, isFalse);
@@ -53,50 +56,56 @@ void main() {
   });
 
   group('LaporanProvider.untuk (data per peran)', () {
-    test('pelapor hanya melihat miliknya, admin semua, teknisi tugasnya', () {
-      final provider = LaporanProvider();
-      final awal = provider.laporanList.length;
+    test(
+      'pelapor hanya melihat miliknya, admin semua, teknisi tugasnya',
+      () async {
+        final provider = LaporanProvider();
+        final awal = provider.laporanList.length;
 
-      provider.tambahLaporan(_buat('A', pelaporId: 'u1'));
-      provider.tambahLaporan(_buat('B', pelaporId: 'u2'));
-      provider.verifikasi('A', oleh: 'Admin');
-      provider.tugaskan(
-        'A',
-        teknisiId: 't1',
-        teknisiNama: 'Teknisi 1',
-        oleh: 'Admin',
-      );
+        await provider.tambahLaporan(_buat('A', pelaporId: 'u1'));
+        await provider.tambahLaporan(_buat('B', pelaporId: 'u2'));
+        await provider.verifikasi('A', oleh: 'Admin');
+        await provider.tugaskan(
+          'A',
+          teknisiId: 't1',
+          teknisiNama: 'Teknisi 1',
+          oleh: 'Admin',
+        );
 
-      expect(
-        provider.untuk(_user('u1', PeranPengguna.mahasiswa)).map((l) => l.id),
-        ['A'],
-      );
-      expect(
-        provider.untuk(_user('u2', PeranPengguna.dosen)).map((l) => l.id),
-        ['B'],
-      );
-      expect(provider.untuk(_user('x', PeranPengguna.admin)).length, awal + 2);
-      expect(
-        provider.untuk(_user('t1', PeranPengguna.teknisi)).map((l) => l.id),
-        ['A'],
-      );
-      expect(provider.untuk(_user('t2', PeranPengguna.teknisi)), isEmpty);
-    });
+        expect(
+          provider.untuk(_user('u1', PeranPengguna.mahasiswa)).map((l) => l.id),
+          ['A'],
+        );
+        expect(
+          provider.untuk(_user('u2', PeranPengguna.dosen)).map((l) => l.id),
+          ['B'],
+        );
+        expect(
+          provider.untuk(_user('x', PeranPengguna.admin)).length,
+          awal + 2,
+        );
+        expect(
+          provider.untuk(_user('t1', PeranPengguna.teknisi)).map((l) => l.id),
+          ['A'],
+        );
+        expect(provider.untuk(_user('t2', PeranPengguna.teknisi)), isEmpty);
+      },
+    );
   });
 
   group('Alur status', () {
-    test('alur lengkap: dilaporkan > terverifikasi > ditugaskan > dikerjakan > selesai', () {
+    test('alur lengkap: dilaporkan > terverifikasi > ditugaskan > dikerjakan > selesai', () async {
       final provider = LaporanProvider();
       final l = _buat('ALUR');
-      provider.tambahLaporan(l);
+      await provider.tambahLaporan(l);
       var dipanggil = 0;
       provider.addListener(() => dipanggil++);
 
-      expect(provider.verifikasi('ALUR', oleh: 'Admin'), isTrue);
+      expect(await provider.verifikasi('ALUR', oleh: 'Admin'), isTrue);
       expect(l.status, StatusLaporan.diverifikasi);
 
       expect(
-        provider.tugaskan(
+        await provider.tugaskan(
           'ALUR',
           teknisiId: 't1',
           teknisiNama: 'Pak Rudi',
@@ -108,14 +117,14 @@ void main() {
       expect(l.teknisiId, 't1');
       expect(l.teknisiNama, 'Pak Rudi');
 
-      expect(provider.mulaiKerja('ALUR', oleh: 'Pak Rudi'), isTrue);
+      expect(await provider.mulaiKerja('ALUR', oleh: 'Pak Rudi'), isTrue);
       expect(l.status, StatusLaporan.diproses);
 
       final foto = [
         Uint8List.fromList([1, 2, 3]),
       ];
       expect(
-        provider.selesaikan(
+        await provider.selesaikan(
           'ALUR',
           oleh: 'Pak Rudi',
           catatan: 'AC sudah diperbaiki',
@@ -137,14 +146,14 @@ void main() {
       expect(dipanggil, 4);
     });
 
-    test('urutan yang salah ditolak', () {
+    test('urutan yang salah ditolak', () async {
       final provider = LaporanProvider();
       final l = _buat('SALAH');
-      provider.tambahLaporan(l);
+      await provider.tambahLaporan(l);
 
       // belum diverifikasi
       expect(
-        provider.tugaskan(
+        await provider.tugaskan(
           'SALAH',
           teknisiId: 't1',
           teknisiNama: 'T',
@@ -152,26 +161,29 @@ void main() {
         ),
         isFalse,
       );
-      expect(provider.mulaiKerja('SALAH', oleh: 'T'), isFalse);
-      expect(provider.selesaikan('SALAH', oleh: 'T'), isFalse);
+      expect(await provider.mulaiKerja('SALAH', oleh: 'T'), isFalse);
+      expect(await provider.selesaikan('SALAH', oleh: 'T'), isFalse);
 
-      provider.verifikasi('SALAH', oleh: 'Admin');
+      await provider.verifikasi('SALAH', oleh: 'Admin');
       // verifikasi dua kali / id tidak ada
-      expect(provider.verifikasi('SALAH', oleh: 'Admin'), isFalse);
-      expect(provider.verifikasi('TIDAK-ADA', oleh: 'Admin'), isFalse);
+      expect(await provider.verifikasi('SALAH', oleh: 'Admin'), isFalse);
+      expect(await provider.verifikasi('TIDAK-ADA', oleh: 'Admin'), isFalse);
       expect(l.status, StatusLaporan.diverifikasi);
     });
 
-    test('tolak wajib alasan dan hanya sebelum ditugaskan', () {
+    test('tolak wajib alasan dan hanya sebelum ditugaskan', () async {
       final provider = LaporanProvider();
       final l = _buat('TOLAK');
-      provider.tambahLaporan(l);
+      await provider.tambahLaporan(l);
 
-      expect(provider.tolak('TOLAK', oleh: 'Admin', alasan: '   '), isFalse);
+      expect(
+        await provider.tolak('TOLAK', oleh: 'Admin', alasan: '   '),
+        isFalse,
+      );
       expect(l.status, StatusLaporan.menunggu);
 
       expect(
-        provider.tolak('TOLAK', oleh: 'Admin', alasan: 'Laporan ganda'),
+        await provider.tolak('TOLAK', oleh: 'Admin', alasan: 'Laporan ganda'),
         isTrue,
       );
       expect(l.status, StatusLaporan.ditolak);
@@ -179,15 +191,15 @@ void main() {
       expect(l.aktif, isFalse);
 
       // sudah ditolak: tidak bisa diverifikasi lagi
-      expect(provider.verifikasi('TOLAK', oleh: 'Admin'), isFalse);
+      expect(await provider.verifikasi('TOLAK', oleh: 'Admin'), isFalse);
     });
 
-    test('ganti teknisi saat masih berstatus ditugaskan', () {
+    test('ganti teknisi saat masih berstatus ditugaskan', () async {
       final provider = LaporanProvider();
       final l = _buat('GANTI');
-      provider.tambahLaporan(l);
-      provider.verifikasi('GANTI', oleh: 'Admin');
-      provider.tugaskan(
+      await provider.tambahLaporan(l);
+      await provider.verifikasi('GANTI', oleh: 'Admin');
+      await provider.tugaskan(
         'GANTI',
         teknisiId: 't1',
         teknisiNama: 'Satu',
@@ -195,7 +207,7 @@ void main() {
       );
 
       expect(
-        provider.tugaskan(
+        await provider.tugaskan(
           'GANTI',
           teknisiId: 't2',
           teknisiNama: 'Dua',
@@ -208,9 +220,9 @@ void main() {
       expect(l.riwayat.last.catatan, 'Teknisi diganti menjadi Dua.');
 
       // setelah dikerjakan tidak bisa diganti lagi
-      provider.mulaiKerja('GANTI', oleh: 'Dua');
+      await provider.mulaiKerja('GANTI', oleh: 'Dua');
       expect(
-        provider.tugaskan(
+        await provider.tugaskan(
           'GANTI',
           teknisiId: 't3',
           teknisiNama: 'Tiga',
@@ -222,13 +234,13 @@ void main() {
   });
 
   group('SLA', () {
-    test('target per prioritas', () {
+    test('target per prioritas', () async {
       expect(PrioritasLaporan.tinggi.targetSla, const Duration(hours: 24));
       expect(PrioritasLaporan.sedang.targetSla, const Duration(hours: 72));
       expect(PrioritasLaporan.rendah.targetSla, const Duration(days: 7));
     });
 
-    test('laporan aktif yang lewat batas dihitung terlambat', () {
+    test('laporan aktif yang lewat batas dihitung terlambat', () async {
       final baru = _buat('BARU', prioritas: PrioritasLaporan.tinggi);
       final lama = _buat(
         'LAMA',
@@ -242,7 +254,7 @@ void main() {
 
     test(
       'laporan selesai dinilai dari waktu selesai, bukan waktu sekarang',
-      () {
+      () async {
         final provider = LaporanProvider();
         final l = _buat(
           'CEPAT',
@@ -274,7 +286,7 @@ void main() {
             ),
           ],
         );
-        provider.tambahLaporan(selesai);
+        await provider.tambahLaporan(selesai);
 
         expect(selesai.melewatiSla, isFalse);
       },

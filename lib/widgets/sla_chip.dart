@@ -7,7 +7,7 @@ import '../theme/app_theme.dart';
 /// Penanda SLA: sisa waktu / terlambat (laporan aktif) atau hasil akhir.
 ///
 /// Desain: jika SLA masih aman → teks abu netral tanpa latar (lebih bersih).
-/// Jika sudah lewat / kritis → warna Muted Terracotta (#B84A4A) dengan latar.
+/// Jika sudah lewat / kritis → warna peringatan tema aplikasi dengan latar.
 class SlaChip extends StatelessWidget {
   final Laporan laporan;
 
@@ -23,7 +23,7 @@ class SlaChip extends StatelessWidget {
     if (!laporan.aktif && !laporan.melewatiSla) {
       return _buildBadge(
         teks: 'Tepat Waktu',
-        icon: Icons.check_rounded,
+        icon: Icons.check,
         warna: AppColors.statusSelesai,
         bgColor: AppColors.statusSelesaiBg,
       );
@@ -65,7 +65,7 @@ class SlaChip extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         const Icon(
-          Icons.access_time_rounded,
+          Icons.schedule_outlined,
           size: 12,
           color: AppColors.textMuted,
         ),

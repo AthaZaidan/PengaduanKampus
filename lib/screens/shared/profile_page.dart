@@ -4,11 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../models/app_user.dart';
+import '../../widgets/identitas_kampus.dart';
 import '../../models/laporan.dart';
 import '../../providers/laporan_provider.dart';
-import '../../theme/app_theme.dart';
-import '../../theme/tema_aksen.dart';
 import '../authentication/login_page.dart';
+import '../admin/kelola_lokasi_page.dart';
 
 class ProfilePage extends StatefulWidget {
   final LaporanProvider provider;
@@ -23,6 +23,7 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
+  bool _menyimpanProfil = false;
   static const _bulan = [
     'Januari',
     'Februari',
@@ -44,16 +45,12 @@ class _ProfilePageState extends State<ProfilePage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         behavior: SnackBarBehavior.floating,
-        backgroundColor: error ? AppColors.error : AppColors.success,
+        backgroundColor: error
+            ? const Color(0xFFAC3838)
+            : const Color(0xFF257054),
         margin: const EdgeInsets.all(16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        content: Text(
-          pesan,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        content: Text(pesan, style: const TextStyle(color: Colors.white)),
       ),
     );
   }
@@ -86,21 +83,15 @@ class _ProfilePageState extends State<ProfilePage> {
   // ---------------------------------------------------------------- actions
 
   Future<void> _logout() async {
+    if (_menyimpanProfil || widget.provider.menyimpan) {
+      _snack('Tunggu penyimpanan selesai sebelum keluar.', error: true);
+      return;
+    }
     final yakin = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          'Keluar dari akun?',
-          style: TextStyle(
-            fontWeight: FontWeight.w700,
-            color: AppColors.deepForest,
-          ),
-        ),
-        content: const Text(
-          'Anda perlu masuk lagi untuk memakai aplikasi Pengaduan Kampus.',
-          style: TextStyle(color: AppColors.textSecondary),
-        ),
+        title: const Text('Keluar dari akun?'),
+        content: const Text('Anda perlu masuk lagi untuk memakai aplikasi.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -108,12 +99,7 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.error,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red.shade600),
             child: const Text('Keluar'),
           ),
         ],
@@ -121,12 +107,20 @@ class _ProfilePageState extends State<ProfilePage> {
     );
     if (yakin != true) return;
 
+    try {} catch (_) {
+      if (mounted) {
+        _snack(
+          'Belum dapat menonaktifkan notifikasi perangkat. Periksa koneksi sebelum keluar.',
+          error: true,
+        );
+      }
+      return;
+    }
     // Logout dari Google Sign-In (jika dipakai) dan Firebase Auth
     try {
       await GoogleSignIn().signOut();
     } catch (_) {}
     await FirebaseAuth.instance.signOut();
-    TemaAksen.warna.value = null;
 
     if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
@@ -136,18 +130,12 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _ubahNama(User user, String namaSekarang) async {
+    if (_menyimpanProfil) return;
     final controller = TextEditingController(text: namaSekarang);
     final nama = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          'Ubah Nama',
-          style: TextStyle(
-            fontWeight: FontWeight.w700,
-            color: AppColors.deepForest,
-          ),
-        ),
+        title: const Text('Ubah Nama'),
         content: TextField(
           controller: controller,
           autofocus: true,
@@ -161,12 +149,6 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.forestGreen,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
             child: const Text('Simpan'),
           ),
         ],
@@ -174,18 +156,32 @@ class _ProfilePageState extends State<ProfilePage> {
     );
     if (nama == null || nama.isEmpty || nama == namaSekarang) return;
 
+    setState(() => _menyimpanProfil = true);
     try {
-      await user.updateDisplayName(nama);
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-        'name': nama,
-      }, SetOptions(merge: true));
-      await user.reload();
+      final db = FirebaseFirestore.instance;
+      await db.runTransaction((tx) async {
+        final ref = db.collection('users').doc(user.uid);
+        final doc = await tx.get(ref);
+        if (!doc.exists) throw StateError('Profil belum tersedia.');
+        tx.update(ref, {'name': nama});
+      });
+      try {
+        await user.updateDisplayName(nama);
+        await user.reload();
+      } catch (_) {
+        // Firestore adalah sumber profil utama; nama Auth dapat diselaraskan kemudian.
+      }
       if (!mounted) return;
       setState(() {});
       _snack('Nama berhasil diperbarui');
     } catch (_) {
       if (!mounted) return;
-      _snack('Gagal memperbarui nama. Coba lagi.', error: true);
+      _snack(
+        'Nama belum tersimpan. Periksa koneksi dan coba lagi.',
+        error: true,
+      );
+    } finally {
+      if (mounted) setState(() => _menyimpanProfil = false);
     }
   }
 
@@ -222,23 +218,12 @@ class _ProfilePageState extends State<ProfilePage> {
       context: context,
       applicationName: 'Pengaduan Kampus',
       applicationVersion: '1.0.0',
-      applicationIcon: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: AppColors.softSage.withValues(alpha: 0.5),
-          shape: BoxShape.circle,
-        ),
-        child: const Icon(
-          Icons.campaign_rounded,
-          size: 32,
-          color: AppColors.forestGreen,
-        ),
-      ),
+      applicationIcon: const LambangKampus(ukuran: 48),
       children: const [
-        SizedBox(height: 10),
+        SizedBox(height: 8),
         Text(
-          'Aplikasi modern untuk melaporkan kerusakan fasilitas kampus dan memantau alur penanganan teknisi secara transparan.',
-          style: TextStyle(color: AppColors.textSecondary, height: 1.4),
+          'Aplikasi untuk melaporkan kerusakan fasilitas kampus dan '
+          'memantau penanganannya.',
         ),
       ],
     );
@@ -249,16 +234,23 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
+    final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
+        bottom: _menyimpanProfil
+            ? const PreferredSize(
+                preferredSize: Size.fromHeight(4),
+                child: LinearProgressIndicator(),
+              )
+            : null,
         title: const Text(
           'Profil Saya',
-          style: TextStyle(fontWeight: FontWeight.w700),
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        backgroundColor: AppColors.forestGreen,
-        foregroundColor: Colors.white,
+        backgroundColor: scheme.surface,
+        foregroundColor: scheme.onSurface,
       ),
       body: user == null
           ? const Center(child: Text('Tidak ada pengguna yang masuk.'))
@@ -268,6 +260,8 @@ class _ProfilePageState extends State<ProfilePage> {
                   .doc(user.uid)
                   .snapshots(),
               builder: (context, snapshot) {
+                // Jika Firestore gagal / dokumen belum ada, tetap tampil
+                // memakai data dari Firebase Auth.
                 final data = snapshot.data?.data() ?? <String, dynamic>{};
                 return _buildBody(context, user, data);
               },
@@ -280,6 +274,8 @@ class _ProfilePageState extends State<ProfilePage> {
     User user,
     Map<String, dynamic> data,
   ) {
+    final scheme = Theme.of(context).colorScheme;
+
     final nama = _ambil(data, 'name') ?? user.displayName ?? 'Mahasiswa';
     final email = _ambil(data, 'email') ?? user.email ?? '-';
     final nim = _ambil(data, 'nim');
@@ -293,98 +289,67 @@ class _ProfilePageState extends State<ProfilePage> {
       padding: const EdgeInsets.all(16),
       children: [
         // ---------------------------------------------------------- header
-        Container(
-          padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 20),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            color: AppColors.forestGreen,
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.forestGreen.withValues(alpha: 0.08),
-                blurRadius: 12,
-                offset: const Offset(0, 3),
-              ),
-            ],
-          ),
-          child: Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(3),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: AppColors.softSage.withValues(alpha: 0.6),
-                    width: 2.5,
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                CircleAvatar(
+                  radius: 32,
+                  backgroundColor: scheme.primary.withValues(alpha: 0.08),
+                  backgroundImage: user.photoURL != null
+                      ? NetworkImage(user.photoURL!)
+                      : null,
+                  child: user.photoURL == null
+                      ? Text(
+                          _inisial(nama),
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w600,
+                            color: scheme.primary,
+                          ),
+                        )
+                      : null,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  nama,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  email,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: scheme.onSurfaceVariant,
                   ),
                 ),
-                child: CircleAvatar(
-                  radius: 40,
-                  backgroundColor: Colors.white,
-                  child: CircleAvatar(
-                    radius: 37,
-                    backgroundColor: AppColors.softSage.withValues(alpha: 0.45),
-                    backgroundImage: user.photoURL != null
-                        ? NetworkImage(user.photoURL!)
-                        : null,
-                    child: user.photoURL == null
-                        ? Text(
-                            _inisial(nama),
-                            style: const TextStyle(
-                              fontSize: 26,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.forestGreen,
-                            ),
-                          )
-                        : null,
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: scheme.primary.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    peran.label,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: scheme.primary,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                nama,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.2,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                email,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.85),
-                  fontSize: 13,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.25),
-                  ),
-                ),
-                child: Text(
-                  peran.label,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 12),
 
         // ------------------------------------------------ ringkasan laporan
         _Kartu(
@@ -401,8 +366,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   _AngkaRingkas(
                     nilai: daftar.length,
                     label: 'Total',
-                    warna: AppColors.forestGreen,
-                    latar: AppColors.statusSelesaiBg,
+                    warna: scheme.primary,
                   ),
                   _AngkaRingkas(
                     nilai: hitung({
@@ -411,27 +375,24 @@ class _ProfilePageState extends State<ProfilePage> {
                       StatusLaporan.ditugaskan,
                     }),
                     label: 'Menunggu',
-                    warna: AppColors.statusMenunggu,
-                    latar: AppColors.statusMenungguBg,
+                    warna: StatusLaporan.menunggu.color,
                   ),
                   _AngkaRingkas(
                     nilai: hitung({StatusLaporan.diproses}),
                     label: 'Dikerjakan',
-                    warna: AppColors.statusDiproses,
-                    latar: AppColors.statusDiprosesBg,
+                    warna: StatusLaporan.diproses.color,
                   ),
                   _AngkaRingkas(
                     nilai: hitung({StatusLaporan.selesai}),
                     label: 'Selesai',
-                    warna: AppColors.statusSelesai,
-                    latar: AppColors.statusSelesaiBg,
+                    warna: StatusLaporan.selesai.color,
                   ),
                 ],
               );
             },
           ),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 12),
 
         // ------------------------------------------------- informasi akun
         _Kartu(
@@ -439,30 +400,26 @@ class _ProfilePageState extends State<ProfilePage> {
           ikon: Icons.badge_outlined,
           child: Column(
             children: [
+              _BarisInfo(ikon: peran.icon, label: 'Peran', nilai: peran.label),
               _BarisInfo(
-                ikon: peran.icon,
-                label: 'Peran Akun',
-                nilai: peran.label,
-              ),
-              _BarisInfo(
-                ikon: Icons.numbers_rounded,
+                ikon: Icons.numbers,
                 label: 'NIM / ID',
                 nilai: nim ?? 'Belum diisi',
                 redup: nim == null,
               ),
               _BarisInfo(
                 ikon: Icons.phone_outlined,
-                label: 'No. HP / WhatsApp',
+                label: 'No. HP',
                 nilai: telepon ?? 'Belum diisi',
                 redup: telepon == null,
               ),
               _BarisInfo(
                 ikon: Icons.email_outlined,
-                label: 'Alamat Email',
+                label: 'Email',
                 nilai: email,
               ),
               _BarisInfo(
-                ikon: Icons.security_rounded,
+                ikon: Icons.security_outlined,
                 label: 'Metode Masuk',
                 nilai: lewatGoogle ? 'Akun Google' : 'Email / NIM',
               ),
@@ -475,15 +432,23 @@ class _ProfilePageState extends State<ProfilePage> {
             ],
           ),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 12),
 
         // ------------------------------------------------------ pengaturan
         _Kartu(
-          judul: 'Pengaturan & Keamanan',
+          judul: 'Pengaturan',
           ikon: Icons.settings_outlined,
-          padding: const EdgeInsets.symmetric(vertical: 4),
+          padding: const EdgeInsets.symmetric(vertical: 6),
           child: Column(
             children: [
+              if (widget.user.peran.isAdmin)
+                _MenuTile(
+                  ikon: Icons.location_on_outlined,
+                  judul: 'Kelola lokasi kampus',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const KelolaLokasiPage()),
+                  ),
+                ),
               _MenuTile(
                 ikon: Icons.edit_outlined,
                 judul: 'Ubah Nama',
@@ -491,43 +456,43 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
               const Divider(height: 1, indent: 56),
               _MenuTile(
-                ikon: Icons.lock_reset_rounded,
+                ikon: Icons.lock_reset,
                 judul: 'Ubah Password',
                 subjudul: 'Kirim tautan reset ke email',
                 onTap: () => _ubahPassword(user),
               ),
               const Divider(height: 1, indent: 56),
               _MenuTile(
-                ikon: Icons.info_outline_rounded,
+                ikon: Icons.info_outline,
                 judul: 'Tentang Aplikasi',
                 onTap: _tentangAplikasi,
               ),
             ],
           ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 20),
 
         // ---------------------------------------------------------- logout
         SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(
             onPressed: _logout,
-            icon: const Icon(Icons.logout_rounded, size: 20),
+            icon: const Icon(Icons.logout),
             label: const Text(
               'Keluar dari Akun',
-              style: TextStyle(fontWeight: FontWeight.w700),
+              style: TextStyle(fontWeight: FontWeight.bold),
             ),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
+              backgroundColor: Colors.red.shade600,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(12),
               ),
             ),
           ),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 12),
       ],
     );
   }
@@ -552,12 +517,14 @@ class _Kartu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     return Card(
       elevation: 0,
       margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: AppColors.borderSubtle, width: 1),
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -566,14 +533,14 @@ class _Kartu extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: Row(
               children: [
-                Icon(ikon, size: 18, color: AppColors.forestGreen),
+                Icon(ikon, size: 18, color: scheme.primary),
                 const SizedBox(width: 8),
                 Text(
                   judul,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.deepForest,
-                    fontSize: 14.5,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: scheme.primary,
+                    fontSize: 14,
                   ),
                 ),
               ],
@@ -590,13 +557,11 @@ class _AngkaRingkas extends StatelessWidget {
   final int nilai;
   final String label;
   final Color warna;
-  final Color latar;
 
   const _AngkaRingkas({
     required this.nilai,
     required this.label,
     required this.warna,
-    required this.latar,
   });
 
   @override
@@ -604,29 +569,18 @@ class _AngkaRingkas extends StatelessWidget {
     return Expanded(
       child: Column(
         children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(color: latar, shape: BoxShape.circle),
-            child: Center(
-              child: Text(
-                '$nilai',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: warna,
-                ),
-              ),
+          Text(
+            '$nilai',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: warna,
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 2),
           Text(
             label,
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textSecondary,
-            ),
+            style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
           ),
           const SizedBox(height: 8),
         ],
@@ -658,7 +612,7 @@ class _BarisInfo extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 10),
           child: Row(
             children: [
-              Icon(ikon, size: 18, color: AppColors.sageGreen),
+              Icon(ikon, size: 20, color: Colors.grey.shade600),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
@@ -666,20 +620,18 @@ class _BarisInfo extends StatelessWidget {
                   children: [
                     Text(
                       label,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11,
-                        color: AppColors.textMuted,
+                        color: Colors.grey.shade500,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       nilai,
                       style: TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w600,
-                        color: redup
-                            ? AppColors.textMuted
-                            : AppColors.deepForest,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: redup ? Colors.grey.shade400 : null,
                         fontStyle: redup ? FontStyle.italic : null,
                       ),
                     ),
@@ -710,31 +662,16 @@ class _MenuTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     return ListTile(
       onTap: onTap,
-      leading: Icon(ikon, color: AppColors.forestGreen, size: 22),
-      title: Text(
-        judul,
-        style: const TextStyle(
-          fontSize: 13.5,
-          fontWeight: FontWeight.w600,
-          color: AppColors.deepForest,
-        ),
-      ),
+      leading: Icon(ikon, color: scheme.primary),
+      title: Text(judul, style: const TextStyle(fontSize: 14)),
       subtitle: subjudul == null
           ? null
-          : Text(
-              subjudul!,
-              style: const TextStyle(
-                fontSize: 12,
-                color: AppColors.textSecondary,
-              ),
-            ),
-      trailing: const Icon(
-        Icons.chevron_right_rounded,
-        color: AppColors.textMuted,
-        size: 20,
-      ),
+          : Text(subjudul!, style: const TextStyle(fontSize: 12)),
+      trailing: Icon(Icons.chevron_right, color: Colors.grey.shade400),
     );
   }
 }

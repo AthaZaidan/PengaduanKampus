@@ -1,9 +1,9 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/app_user.dart';
-import '../../theme/app_theme.dart';
+
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -76,7 +76,7 @@ class _RegisterPageState extends State<RegisterPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Registrasi berhasil! Silakan masuk dengan akun Anda.'),
-          backgroundColor: AppColors.success,
+          backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -97,7 +97,7 @@ class _RegisterPageState extends State<RegisterPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(message),
-          backgroundColor: AppColors.error,
+          backgroundColor: Colors.red.shade700,
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -106,7 +106,7 @@ class _RegisterPageState extends State<RegisterPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error: ${e.toString()}'),
-          backgroundColor: AppColors.error,
+          backgroundColor: Colors.red.shade700,
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -117,304 +117,217 @@ class _RegisterPageState extends State<RegisterPage> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Registrasi Akun Baru'),
-        backgroundColor: AppColors.forestGreen,
-        foregroundColor: Colors.white,
-      ),
+      appBar: AppBar(title: const Text('Pendaftaran akun')),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+          padding: const EdgeInsets.all(24),
           child: Form(
             key: _formKey,
-            child: Container(
-              padding: const EdgeInsets.all(22),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppColors.borderSubtle, width: 1),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.deepForest.withValues(alpha: 0.04),
-                    blurRadius: 16,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Text(
-                    'Lengkapi Data Diri',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.deepForest,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Daftarkan akun untuk membuat dan memantau laporan kampus.',
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 13,
-                    ),
-                  ),
-                  const SizedBox(height: 22),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'Daftar akun pelapor',
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Lengkapi identitas Anda untuk menggunakan layanan pengaduan kampus.',
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                ),
+                const SizedBox(height: 24),
 
-                  // 1. Input Nama Lengkap
-                  TextFormField(
-                    controller: _namaController,
-                    textCapitalization: TextCapitalization.words,
-                    decoration: const InputDecoration(
-                      labelText: 'Nama Lengkap',
-                      hintText: 'Masukkan nama sesuai KTM / KTP',
-                      prefixIcon: Icon(
-                        Icons.person_outline,
-                        color: AppColors.sageGreen,
-                        size: 20,
+                // 1. Input Nama Lengkap
+                TextFormField(
+                  controller: _namaController,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: const InputDecoration(
+                    labelText: 'Nama Lengkap',
+                    hintText: 'Masukkan nama sesuai KTM / KTP',
+                    prefixIcon: Icon(Icons.person_outline),
+                  ),
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) {
+                      return 'Nama lengkap wajib diisi';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // Jenis pengguna
+                const Text(
+                  'Daftar sebagai',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: SegmentedButton<PeranPengguna>(
+                    showSelectedIcon: false,
+                    segments: const [
+                      ButtonSegment(
+                        value: PeranPengguna.mahasiswa,
+                        label: Text('Mahasiswa'),
+                      ),
+                      ButtonSegment(
+                        value: PeranPengguna.dosen,
+                        label: Text('Dosen'),
+                      ),
+                      ButtonSegment(
+                        value: PeranPengguna.staf,
+                        label: Text('Staf'),
+                      ),
+                    ],
+                    selected: {_peran},
+                    onSelectionChanged: (v) => setState(() => _peran = v.first),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // 2. Input NIM (mahasiswa: tepat 9 digit) / NIP-ID (dosen, staf)
+                TextFormField(
+                  controller: _nimController,
+                  keyboardType: TextInputType.number,
+                  maxLength: _peran == PeranPengguna.mahasiswa ? 9 : 20,
+                  decoration: InputDecoration(
+                    labelText: _peran == PeranPengguna.mahasiswa
+                        ? 'NIM (9 Digit)'
+                        : 'NIP / ID Pegawai',
+                    hintText: _peran == PeranPengguna.mahasiswa
+                        ? 'Contoh: 241402101'
+                        : 'Contoh: 198501012010011001',
+                    prefixIcon: const Icon(Icons.badge_outlined),
+                    counterText: "", // Menyembunyikan text counter default
+                  ),
+                  validator: (v) {
+                    final nilai = v?.trim() ?? '';
+                    final mahasiswa = _peran == PeranPengguna.mahasiswa;
+                    if (nilai.isEmpty) {
+                      return mahasiswa
+                          ? 'NIM wajib diisi'
+                          : 'NIP / ID wajib diisi';
+                    }
+                    if (mahasiswa && nilai.length != 9) {
+                      return 'NIM harus terdiri dari 9 digit angka';
+                    }
+                    if (!mahasiswa && nilai.length < 5) {
+                      return 'NIP / ID minimal 5 digit';
+                    }
+                    if (!RegExp(r'^[0-9]+$').hasMatch(nilai)) {
+                      return mahasiswa
+                          ? 'NIM hanya boleh berisi angka'
+                          : 'NIP / ID hanya boleh berisi angka';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // 3. Input Email
+                TextFormField(
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: const InputDecoration(
+                    labelText: 'Email',
+                    hintText: 'Contoh: mahasiswasuper@gmail.com / @students.usu.ac.id',
+                    prefixIcon: Icon(Icons.email_outlined),
+                  ),
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) {
+                      return 'Email wajib diisi';
+                    }
+                    if (!v.contains('@') || !v.contains('.')) {
+                      return 'Format email tidak valid';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // 4. Input Nomor HP
+                TextFormField(
+                  controller: _phoneController,
+                  keyboardType: TextInputType.phone,
+                  decoration: const InputDecoration(
+                    labelText: 'Nomor HP / WhatsApp',
+                    hintText: 'Contoh: 081234567890',
+                    prefixIcon: Icon(Icons.phone_outlined),
+                  ),
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) {
+                      return 'Nomor HP wajib diisi';
+                    }
+                    if (v.trim().length < 10 || v.trim().length > 13) {
+                      return 'Nomor HP tidak valid (10-13 digit)';
+                    }
+                    if (!RegExp(r'^[0-9]+$').hasMatch(v.trim())) {
+                      return 'Nomor HP hanya boleh berisi angka';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // 5. Input Password
+                TextFormField(
+                  controller: _passwordController,
+                  obscureText: _isPasswordHidden,
+                  decoration: InputDecoration(
+                    labelText: 'Password',
+                    hintText: 'Minimal 6 karakter',
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _isPasswordHidden
+                            ? Icons.visibility_off_outlined
+                            : Icons.visibility_outlined,
+                      ),
+                      onPressed: () => setState(
+                        () => _isPasswordHidden = !_isPasswordHidden,
                       ),
                     ),
-                    validator: (v) {
-                      if (v == null || v.trim().isEmpty) {
-                        return 'Nama lengkap wajib diisi';
-                      }
-                      return null;
-                    },
                   ),
-                  const SizedBox(height: 16),
+                  validator: (v) {
+                    if (v == null || v.isEmpty) return 'Password wajib diisi';
+                    if (v.length < 6) return 'Password minimal 6 karakter';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 28),
 
-                  // Jenis pengguna selector
-                  const Text(
-                    'Daftar sebagai',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                      color: AppColors.deepForest,
+                // Tombol Register
+                ElevatedButton(
+                  onPressed: _isLoading ? null : () => _register(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: scheme.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    width: double.infinity,
-                    child: SegmentedButton<PeranPengguna>(
-                      showSelectedIcon: false,
-                      style: ButtonStyle(
-                        backgroundColor: WidgetStateProperty.resolveWith((
-                          states,
-                        ) {
-                          if (states.contains(WidgetState.selected)) {
-                            return AppColors.forestGreen;
-                          }
-                          return AppColors.surfaceContainerLow;
-                        }),
-                        foregroundColor: WidgetStateProperty.resolveWith((
-                          states,
-                        ) {
-                          if (states.contains(WidgetState.selected)) {
-                            return Colors.white;
-                          }
-                          return AppColors.deepForest;
-                        }),
-                        side: WidgetStateProperty.all(
-                          const BorderSide(color: AppColors.borderSubtle),
-                        ),
-                        shape: WidgetStateProperty.all(
-                          RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text(
+                          'Daftar Sekarang',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                      ),
-                      segments: const [
-                        ButtonSegment(
-                          value: PeranPengguna.mahasiswa,
-                          label: Text(
-                            'Mahasiswa',
-                            style: TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                        ),
-                        ButtonSegment(
-                          value: PeranPengguna.dosen,
-                          label: Text(
-                            'Dosen',
-                            style: TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                        ),
-                        ButtonSegment(
-                          value: PeranPengguna.staf,
-                          label: Text(
-                            'Staf',
-                            style: TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                        ),
-                      ],
-                      selected: {_peran},
-                      onSelectionChanged: (v) =>
-                          setState(() => _peran = v.first),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // 2. Input NIM (mahasiswa: tepat 9 digit) / NIP-ID (dosen, staf)
-                  TextFormField(
-                    controller: _nimController,
-                    keyboardType: TextInputType.number,
-                    maxLength: _peran == PeranPengguna.mahasiswa ? 9 : 20,
-                    decoration: InputDecoration(
-                      labelText: _peran == PeranPengguna.mahasiswa
-                          ? 'NIM (9 Digit)'
-                          : 'NIP / ID Pegawai',
-                      hintText: _peran == PeranPengguna.mahasiswa
-                          ? 'Contoh: 241402101'
-                          : 'Contoh: 198501012010011001',
-                      prefixIcon: const Icon(
-                        Icons.badge_outlined,
-                        color: AppColors.sageGreen,
-                        size: 20,
-                      ),
-                      counterText: "",
-                    ),
-                    validator: (v) {
-                      final nilai = v?.trim() ?? '';
-                      final mahasiswa = _peran == PeranPengguna.mahasiswa;
-                      if (nilai.isEmpty) {
-                        return mahasiswa
-                            ? 'NIM wajib diisi'
-                            : 'NIP / ID wajib diisi';
-                      }
-                      if (mahasiswa && nilai.length != 9) {
-                        return 'NIM harus terdiri dari 9 digit angka';
-                      }
-                      if (!mahasiswa && nilai.length < 5) {
-                        return 'NIP / ID minimal 5 digit';
-                      }
-                      if (!RegExp(r'^[0-9]+$').hasMatch(nilai)) {
-                        return mahasiswa
-                            ? 'NIM hanya boleh berisi angka'
-                            : 'NIP / ID hanya boleh berisi angka';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  // 3. Input Email
-                  TextFormField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(
-                      labelText: 'Email',
-                      hintText: 'Contoh: nama@students.usu.ac.id / email aktif',
-                      prefixIcon: Icon(
-                        Icons.email_outlined,
-                        color: AppColors.sageGreen,
-                        size: 20,
-                      ),
-                    ),
-                    validator: (v) {
-                      if (v == null || v.trim().isEmpty) {
-                        return 'Email wajib diisi';
-                      }
-                      if (!v.contains('@') || !v.contains('.')) {
-                        return 'Format email tidak valid';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  // 4. Input Nomor HP
-                  TextFormField(
-                    controller: _phoneController,
-                    keyboardType: TextInputType.phone,
-                    decoration: const InputDecoration(
-                      labelText: 'Nomor HP / WhatsApp',
-                      hintText: 'Contoh: 081234567890',
-                      prefixIcon: Icon(
-                        Icons.phone_outlined,
-                        color: AppColors.sageGreen,
-                        size: 20,
-                      ),
-                    ),
-                    validator: (v) {
-                      if (v == null || v.trim().isEmpty) {
-                        return 'Nomor HP wajib diisi';
-                      }
-                      if (v.trim().length < 10 || v.trim().length > 13) {
-                        return 'Nomor HP tidak valid (10-13 digit)';
-                      }
-                      if (!RegExp(r'^[0-9]+$').hasMatch(v.trim())) {
-                        return 'Nomor HP hanya boleh berisi angka';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  // 5. Input Password
-                  TextFormField(
-                    controller: _passwordController,
-                    obscureText: _isPasswordHidden,
-                    decoration: InputDecoration(
-                      labelText: 'Password',
-                      hintText: 'Minimal 6 karakter',
-                      prefixIcon: const Icon(
-                        Icons.lock_outline,
-                        color: AppColors.sageGreen,
-                        size: 20,
-                      ),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _isPasswordHidden
-                              ? Icons.visibility_off_outlined
-                              : Icons.visibility_outlined,
-                          color: AppColors.textMuted,
-                          size: 20,
-                        ),
-                        onPressed: () => setState(
-                          () => _isPasswordHidden = !_isPasswordHidden,
-                        ),
-                      ),
-                    ),
-                    validator: (v) {
-                      if (v == null || v.isEmpty) return 'Password wajib diisi';
-                      if (v.length < 6) return 'Password minimal 6 karakter';
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 28),
-
-                  // Tombol Register
-                  ElevatedButton(
-                    onPressed: _isLoading ? null : () => _register(),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.forestGreen,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Text(
-                            'Daftar Sekarang',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),

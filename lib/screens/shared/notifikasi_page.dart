@@ -1,24 +1,146 @@
+import 'dart:async';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+
+import '../../services/fitur_laporan_service.dart';
+import '../../services/laporan_repository.dart';
 
 import '../../models/app_user.dart';
 import '../../models/laporan.dart';
 import '../../providers/laporan_provider.dart';
-import '../../theme/app_theme.dart';
 import 'detail_laporan_page.dart';
 
 /// Daftar pemberitahuan perubahan status laporan (diambil dari timeline).
-class NotifikasiPage extends StatelessWidget {
+class NotifikasiPage extends StatefulWidget {
   final LaporanProvider provider;
   final AppUser user;
 
   const NotifikasiPage({super.key, required this.provider, required this.user});
 
+  @override
+  State<NotifikasiPage> createState() => _NotifikasiPageState();
+}
+
+class _NotifikasiPageState extends State<NotifikasiPage> {
+  LaporanProvider get provider => widget.provider;
+  AppUser get user => widget.user;
+  Set<String> _dibaca = {};
+  StreamSubscription<Set<String>>? _subscription;
+  final _komentarSubs =
+      <String, StreamSubscription<QuerySnapshot<Map<String, dynamic>>>>{};
+  final _komentar =
+      <String, List<QueryDocumentSnapshot<Map<String, dynamic>>>>{};
+  bool _komentarGagal = false;
+
+  void _pantauKomentar() {
+    if (!provider.menggunakanFirebase) return;
+    final ids = provider.untuk(user).map((l) => l.id).toSet();
+    for (final id in _komentarSubs.keys.toList()) {
+      if (!ids.contains(id)) {
+        _komentarSubs.remove(id)?.cancel();
+        _komentar.remove(id);
+      }
+    }
+    for (final id in ids) {
+      _komentarSubs.putIfAbsent(
+        id,
+        () => FirebaseFirestore.instance
+            .collection('laporan/$id/komentar')
+            .orderBy('createdAt')
+            .limitToLast(10)
+            .snapshots()
+            .listen(
+              (s) {
+                if (mounted) setState(() => _komentar[id] = s.docs);
+              },
+              onError: (Object _) {
+                if (mounted) setState(() => _komentarGagal = true);
+              },
+            ),
+      );
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    provider.addListener(_pantauKomentar);
+    _pantauKomentar();
+    if (provider.menggunakanFirebase) {
+      _subscription = FiturLaporanService(user.uid).dibaca().listen(
+        (ids) {
+          if (mounted) setState(() => _dibaca = ids);
+        },
+        onError: (Object _) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Status baca belum dapat dimuat.')),
+            );
+          }
+        },
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    provider.removeListener(_pantauKomentar);
+    for (final sub in _komentarSubs.values) {
+      sub.cancel();
+    }
+    _subscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _tandai(Iterable<String> ids) async {
+    final daftar = ids.toList();
+    try {
+      if (provider.menggunakanFirebase) {
+        await FiturLaporanService(user.uid).tandaiDibaca(daftar);
+      }
+      if (mounted) setState(() => _dibaca.addAll(daftar));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(pesanGalatFirebase(e))));
+      }
+    }
+  }
+
   List<_Notif> _kumpulkan() {
     final hasil = <_Notif>[];
     for (final laporan in provider.untuk(user)) {
       // Entri pertama adalah "Laporan dibuat", jadi dilewati.
-      for (var i = 1; i < laporan.riwayat.length; i++) {
-        hasil.add(_Notif(laporan, laporan.riwayat[i]));
+      for (
+        var i = user.peran.isAdmin ? 0 : 1;
+        i < laporan.riwayat.length;
+        i++
+      ) {
+        hasil.add(_Notif(laporan, laporan.riwayat[i], '${laporan.id}_$i'));
+      }
+    }
+    for (final laporan in provider.untuk(user)) {
+      for (final doc
+          in _komentar[laporan.id] ??
+              <QueryDocumentSnapshot<Map<String, dynamic>>>[]) {
+        final data = doc.data();
+        if (data['uid'] == user.uid) continue;
+        final waktu = data['createdAt'];
+        if (waktu is! Timestamp) continue;
+        hasil.add(
+          _Notif(
+            laporan,
+            RiwayatStatus(
+              status: laporan.status,
+              waktu: waktu.toDate(),
+              oleh: data['nama'] as String? ?? 'Pengguna',
+              catatan: data['teks'] as String?,
+            ),
+            'komentar_${laporan.id}_${doc.id}',
+            komentar: true,
+          ),
+        );
       }
     }
     hasil.sort((a, b) => b.entri.waktu.compareTo(a.entri.waktu));
@@ -34,19 +156,45 @@ class NotifikasiPage extends StatelessWidget {
   }
 
   Widget _buildContent(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final daftar = _kumpulkan();
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text(
           'Notifikasi',
-          style: TextStyle(fontWeight: FontWeight.w700),
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        backgroundColor: AppColors.forestGreen,
-        foregroundColor: Colors.white,
-        elevation: 0,
+        actions: [
+          PopupMenuButton<String>(
+            tooltip: 'Opsi notifikasi',
+            onSelected: (v) {
+              if (v == 'baca') {
+                _tandai(daftar.map((n) => n.id));
+              }
+            },
+            itemBuilder: (_) => [
+              const PopupMenuItem(
+                value: 'baca',
+                child: Text('Tandai semua dibaca'),
+              ),
+            ],
+          ),
+        ],
+        backgroundColor: scheme.surface,
+        foregroundColor: scheme.onSurface,
       ),
+      bottomNavigationBar: _komentarGagal
+          ? const SafeArea(
+              child: Padding(
+                padding: EdgeInsets.all(12),
+                child: Text(
+                  'Komentar notifikasi belum dapat dimuat. Buka ulang halaman untuk mencoba lagi.',
+                ),
+              ),
+            )
+          : null,
       body: daftar.isEmpty
           ? Center(
               child: Padding(
@@ -54,43 +202,26 @@ class NotifikasiPage extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(22),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: AppColors.borderSubtle),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.deepForest.withValues(alpha: 0.04),
-                            blurRadius: 16,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.notifications_none_rounded,
-                        size: 52,
-                        color: AppColors.sageGreen,
-                      ),
+                    Icon(
+                      Icons.notifications_none,
+                      size: 64,
+                      color: Colors.grey.shade400,
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 12),
                     const Text(
-                      'Belum Ada Notifikasi',
+                      'Belum ada notifikasi',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.deepForest,
                       ),
                     ),
-                    const SizedBox(height: 6),
-                    const Text(
-                      'Perubahan status laporan Anda akan muncul di sini secara berkala.',
+                    const SizedBox(height: 4),
+                    Text(
+                      'Perubahan status laporan akan muncul di sini.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: AppColors.textSecondary,
+                        color: Colors.grey.shade600,
                         fontSize: 13,
-                        height: 1.4,
                       ),
                     ),
                   ],
@@ -98,20 +229,24 @@ class NotifikasiPage extends StatelessWidget {
               ),
             )
           : ListView.separated(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+              padding: const EdgeInsets.all(16),
               itemCount: daftar.length,
               separatorBuilder: (_, _) => const SizedBox(height: 10),
               itemBuilder: (context, i) => _NotifTile(
                 notif: daftar[i],
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => DetailLaporanPage(
-                      laporan: daftar[i].laporan,
-                      provider: provider,
-                      user: user,
+                dibaca: _dibaca.contains(daftar[i].id),
+                onTap: () {
+                  _tandai([daftar[i].id]);
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => DetailLaporanPage(
+                        laporan: daftar[i].laporan,
+                        provider: provider,
+                        user: user,
+                      ),
                     ),
-                  ),
-                ),
+                  );
+                },
               ),
             ),
     );
@@ -121,20 +256,27 @@ class NotifikasiPage extends StatelessWidget {
 class _Notif {
   final Laporan laporan;
   final RiwayatStatus entri;
+  final String id;
+  final bool komentar;
 
-  const _Notif(this.laporan, this.entri);
+  const _Notif(this.laporan, this.entri, this.id, {this.komentar = false});
 }
 
 class _NotifTile extends StatelessWidget {
   final _Notif notif;
+  final bool dibaca;
   final VoidCallback onTap;
 
-  const _NotifTile({required this.notif, required this.onTap});
+  const _NotifTile({
+    required this.notif,
+    required this.onTap,
+    required this.dibaca,
+  });
 
   static String _waktuRelatif(DateTime t) {
     final d = DateTime.now().difference(t);
     if (d.inMinutes < 1) return 'Baru saja';
-    if (d.inMinutes < 60) return '${d.inMinutes} m lalu';
+    if (d.inMinutes < 60) return '${d.inMinutes} menit lalu';
     if (d.inHours < 24) return '${d.inHours} jam lalu';
     if (d.inDays < 7) return '${d.inDays} hari lalu';
     return '${t.day}/${t.month}/${t.year}';
@@ -145,139 +287,93 @@ class _NotifTile extends StatelessWidget {
     final status = notif.entri.status;
     final catatan = notif.entri.catatan;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderSubtle),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.deepForest.withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+    return Card(
+      color: dibaca
+          ? Theme.of(context).colorScheme.surface
+          : Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
+      elevation: 0,
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
       ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(16),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    color: status.backgroundColor,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: status.color.withValues(alpha: 0.2),
-                      width: 1,
-                    ),
-                  ),
-                  child: Icon(status.icon, color: status.color, size: 20),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              notif.laporan.judul,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                                color: AppColors.deepForest,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            _waktuRelatif(notif.entri.waktu),
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: AppColors.textMuted,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 7,
-                          vertical: 2.5,
-                        ),
-                        decoration: BoxDecoration(
-                          color: status.backgroundColor,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: status.color.withValues(alpha: 0.15),
+                child: Icon(status.icon, color: status.color, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (!dibaca)
+                      const Padding(
+                        padding: EdgeInsets.only(bottom: 4),
                         child: Text(
-                          'Status: ${status.label}',
+                          'Belum dibaca',
                           style: TextStyle(
-                            fontSize: 11,
+                            fontSize: 10,
                             fontWeight: FontWeight.w600,
-                            color: status.color,
                           ),
                         ),
                       ),
-                      if (catatan != null && catatan.isNotEmpty) ...[
-                        const SizedBox(height: 6),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 7,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.softSage.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            catatan,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              height: 1.35,
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 6),
+                    Text(
+                      notif.laporan.judul,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      notif.komentar
+                          ? 'Klarifikasi baru'
+                          : notif.id.endsWith('_0')
+                          ? 'Laporan baru diterima'
+                          : 'Status berubah menjadi ${status.label}',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: status.color,
+                      ),
+                    ),
+                    if (catatan != null && catatan.isNotEmpty) ...[
+                      const SizedBox(height: 4),
                       Text(
-                        'ID: ${notif.laporan.id}',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: AppColors.textMuted,
-                          fontWeight: FontWeight.w500,
+                        catatan,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12,
+                          height: 1.3,
+                          color: Colors.grey.shade700,
                         ),
                       ),
                     ],
-                  ),
+                    const SizedBox(height: 6),
+                    Text(
+                      '${_waktuRelatif(notif.entri.waktu)} \u2022 ${notif.laporan.id}',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey.shade500,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 4),
-                const Padding(
-                  padding: EdgeInsets.only(top: 10),
-                  child: Icon(
-                    Icons.chevron_right_rounded,
-                    color: AppColors.textMuted,
-                    size: 18,
-                  ),
-                ),
-              ],
-            ),
+              ),
+              Icon(Icons.chevron_right, color: Colors.grey.shade400),
+            ],
           ),
         ),
       ),

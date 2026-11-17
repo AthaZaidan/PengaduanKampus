@@ -1,0 +1,166 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function admin() {
+      return signedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
+        in ['admin', 'admin_fasilitas', 'admin fasilitas'];
+    }
+    function teknisi() {
+      return signedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teknisi';
+    }
+    function pelapor() {
+      return signedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
+        in ['mahasiswa', 'student', 'dosen', 'staf', 'staff'];
+    }
+    match /users/{uid} {
+      allow get: if signedIn() && (request.auth.uid == uid || admin());
+      allow list: if admin();
+      allow create: if signedIn() && request.resource.data.uid == uid && (
+        (request.auth.uid == uid && request.resource.data.role in ['mahasiswa', 'student', 'dosen', 'staf']) ||
+        (admin() && request.resource.data.role == 'teknisi' && request.resource.data.createdBy == request.auth.uid)
+      );
+      allow update: if signedIn() && request.auth.uid == uid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'phone', 'nim']) &&
+        request.resource.data.name is string && request.resource.data.name.size() > 0;
+      allow delete: if false;
+    }
+
+    match /users/{uid}/draf/{id} {
+      function pemilik() { return signedIn() && request.auth.uid == uid && id == 'aktif'; }
+      allow read, delete: if pemilik();
+      allow create, update: if pemilik() && request.resource.data.keys().hasOnly([
+        'laporanId', 'judul', 'deskripsi', 'lokasi', 'kategori', 'prioritas', 'fotoPaths', 'updatedAt']) &&
+        request.resource.data.laporanId is string && request.resource.data.laporanId.size() <= 100 &&
+        request.resource.data.judul is string && request.resource.data.judul.size() <= 150 &&
+        request.resource.data.deskripsi is string && request.resource.data.deskripsi.size() <= 5000 &&
+        request.resource.data.lokasi is string && request.resource.data.lokasi.size() <= 200 &&
+        request.resource.data.kategori in ['fasilitas', 'listrik', 'airBersih', 'internet', 'kebersihan', 'lainnya'] &&
+        request.resource.data.prioritas in ['rendah', 'sedang', 'tinggi'] &&
+        request.resource.data.fotoPaths is list && request.resource.data.fotoPaths.size() <= 3 &&
+        (request.resource.data.fotoPaths.size() < 1 || request.resource.data.fotoPaths[0].matches('draf/' + uid + '/[^/]+')) &&
+        (request.resource.data.fotoPaths.size() < 2 || request.resource.data.fotoPaths[1].matches('draf/' + uid + '/[^/]+')) &&
+        (request.resource.data.fotoPaths.size() < 3 || request.resource.data.fotoPaths[2].matches('draf/' + uid + '/[^/]+')) &&
+        request.resource.data.updatedAt == request.time;
+    }
+    match /users/{uid}/dibaca/{id} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow create, update: if signedIn() && request.auth.uid == uid &&
+        request.resource.data.keys().hasOnly(['waktu']) && request.resource.data.waktu == request.time;
+      allow delete: if false;
+    }
+    match /users/{uid}/pesan_masuk/{id} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow write: if false;
+    }
+    match /users/{uid}/devices/{id} {
+      allow read, delete: if signedIn() && request.auth.uid == uid;
+      allow create, update: if signedIn() && request.auth.uid == uid &&
+        request.resource.data.keys().hasOnly(['token', 'updatedAt']) &&
+        request.resource.data.token is string && request.resource.data.token.size() > 0 && request.resource.data.token.size() <= 2000 &&
+        request.resource.data.updatedAt == request.time;
+    }
+    match /lokasi/{id} {
+      allow read: if signedIn();
+      allow create: if admin() && request.resource.data.keys().hasOnly(['nama', 'createdAt']) &&
+        request.resource.data.nama is string && request.resource.data.nama.size() > 0 && request.resource.data.nama.size() <= 200 &&
+        request.resource.data.createdAt == request.time;
+      allow delete: if admin();
+      allow update: if false;
+    }
+    match /laporan/{id}/komentar/{komentarId} {
+      function laporan() { return get(/databases/$(database)/documents/laporan/$(id)).data; }
+      function peserta() { return signedIn() && (admin() || laporan().pelaporId == request.auth.uid ||
+        (teknisi() && laporan().teknisiId == request.auth.uid)); }
+      allow read: if peserta();
+      allow create: if peserta() && request.resource.data.keys().hasOnly(['uid', 'nama', 'teks', 'createdAt']) &&
+        request.resource.data.uid == request.auth.uid && request.resource.data.nama is string &&
+        request.resource.data.nama.size() <= 150 && request.resource.data.teks is string &&
+        request.resource.data.teks.size() > 0 && request.resource.data.teks.size() <= 2000 && request.resource.data.createdAt == request.time;
+      allow update, delete: if false;
+    }
+
+    match /laporan/{id} {
+      function bolehBaca() {
+        return signedIn() && (admin() || resource.data.pelaporId == request.auth.uid ||
+          (teknisi() && resource.data.teknisiId == request.auth.uid));
+      }
+      function fotoValid(paths, jenis, owner) {
+        return paths is list && paths.size() <= 3 &&
+          (paths.size() < 1 || paths[0].matches('laporan/' + owner + '/' + id + '/' + jenis + '/.*')) &&
+          (paths.size() < 2 || paths[1].matches('laporan/' + owner + '/' + id + '/' + jenis + '/.*')) &&
+          (paths.size() < 3 || paths[2].matches('laporan/' + owner + '/' + id + '/' + jenis + '/.*'));
+      }
+      function strukturValid(d) {
+        return d.keys().hasOnly(['judul', 'deskripsi', 'lokasi', 'kategori', 'prioritas', 'pelapor',
+          'pelaporId', 'tanggalLapor', 'status', 'catatanAdmin', 'teknisiId', 'teknisiNama',
+          'fotoPaths', 'fotoSesudahPaths', 'revisi', 'riwayat', 'createdAt', 'updatedAt', 'updatedBy', 'dikonfirmasi']) &&
+          d.get('dikonfirmasi', false) is bool && d.judul is string && d.judul.size() > 0 && d.judul.size() <= 150 &&
+          d.deskripsi is string && d.deskripsi.size() > 0 && d.deskripsi.size() <= 5000 &&
+          d.lokasi is string && d.lokasi.size() > 0 && d.lokasi.size() <= 200 &&
+          d.pelapor is string && d.pelaporId is string && d.tanggalLapor is timestamp &&
+          d.kategori in ['fasilitas', 'listrik', 'airBersih', 'internet', 'kebersihan', 'lainnya'] &&
+          d.prioritas in ['rendah', 'sedang', 'tinggi'] &&
+          d.status in ['menunggu', 'diverifikasi', 'ditugaskan', 'diproses', 'selesai', 'ditolak'] &&
+          (d.catatanAdmin == null || (d.catatanAdmin is string && d.catatanAdmin.size() <= 2000)) &&
+          (d.teknisiId == null || d.teknisiId is string) &&
+          (d.teknisiNama == null || d.teknisiNama is string) &&
+          d.riwayat is list && d.riwayat.size() > 0 && d.riwayat.size() <= 500 &&
+          fotoValid(d.fotoPaths, 'sebelum', d.pelaporId) &&
+          fotoValid(d.fotoSesudahPaths, 'sesudah', d.pelaporId) &&
+          d.updatedBy == request.auth.uid && d.updatedAt == request.time;
+      }
+      function entriValid(d) {
+        let entri = d.riwayat[d.riwayat.size() - 1];
+        return entri.keys().hasOnly(['status', 'waktu', 'oleh', 'olehId', 'catatan']) &&
+          entri.status == d.status && entri.waktu is timestamp &&
+          entri.oleh is string && entri.olehId == request.auth.uid &&
+          (entri.catatan == null || (entri.catatan is string && entri.catatan.size() <= 2000));
+      }
+      function adminTransisi(d) {
+        let lama = resource.data.status;
+        return admin() && d.get('dikonfirmasi', false) == resource.data.get('dikonfirmasi', false) && d.diff(resource.data).affectedKeys().hasOnly([
+          'status', 'catatanAdmin', 'teknisiId', 'teknisiNama', 'riwayat', 'revisi', 'updatedAt', 'updatedBy', 'dikonfirmasi']) && (
+          (lama == 'menunggu' && d.status == 'diverifikasi' && d.teknisiId == null) ||
+          (lama in ['menunggu', 'diverifikasi'] && d.status == 'ditolak' &&
+            d.catatanAdmin is string && d.catatanAdmin.size() > 0 && d.teknisiId == null) ||
+          (lama in ['diverifikasi', 'ditugaskan'] && d.status == 'ditugaskan' &&
+            d.teknisiId is string && get(/databases/$(database)/documents/users/$(d.teknisiId)).data.role == 'teknisi')
+        );
+      }
+      function teknisiTransisi(d) {
+        return teknisi() && d.get('dikonfirmasi', false) == resource.data.get('dikonfirmasi', false) && resource.data.teknisiId == request.auth.uid &&
+          d.diff(resource.data).affectedKeys().hasOnly([
+            'status', 'catatanAdmin', 'fotoSesudahPaths', 'riwayat', 'revisi', 'updatedAt', 'updatedBy', 'dikonfirmasi']) && (
+            (resource.data.status == 'ditugaskan' && d.status == 'diproses' &&
+              d.fotoSesudahPaths == resource.data.fotoSesudahPaths) ||
+            (resource.data.status == 'diproses' && d.status == 'selesai')
+          );
+      }
+      function pelaporTransisi(d) {
+        return resource.data.pelaporId == request.auth.uid && resource.data.status == 'selesai' &&
+          resource.data.get('dikonfirmasi', false) == false &&
+          d.diff(resource.data).affectedKeys().hasOnly(['status', 'catatanAdmin', 'dikonfirmasi', 'riwayat', 'revisi', 'updatedAt', 'updatedBy']) && (
+            (d.status == 'selesai' && d.get('dikonfirmasi', false) == true && d.catatanAdmin == resource.data.catatanAdmin) ||
+            (d.status == 'diproses' && d.get('dikonfirmasi', false) == false && resource.data.teknisiId is string &&
+              d.catatanAdmin is string && d.catatanAdmin.size() > 0)
+          );
+      }
+      // Transaksi pembuatan perlu membaca id yang belum ada; data laporan tetap privat.
+      allow get: if signedIn() && (!exists(/databases/$(database)/documents/laporan/$(id)) || bolehBaca());
+      allow list: if bolehBaca();
+      allow create: if pelapor() && strukturValid(request.resource.data) && entriValid(request.resource.data) &&
+        request.resource.data.pelaporId == request.auth.uid && request.resource.data.status == 'menunggu' &&
+        request.resource.data.get('dikonfirmasi', false) == false && request.resource.data.revisi == 0 && request.resource.data.teknisiId == null &&
+        request.resource.data.teknisiNama == null && request.resource.data.catatanAdmin == null &&
+        request.resource.data.fotoSesudahPaths.size() == 0 && request.resource.data.riwayat.size() == 1 &&
+        request.resource.data.createdAt == request.time;
+      allow update: if signedIn() && strukturValid(request.resource.data) && entriValid(request.resource.data) &&
+        request.resource.data.revisi == resource.data.revisi + 1 &&
+        request.resource.data.riwayat == resource.data.riwayat.concat([
+          request.resource.data.riwayat[request.resource.data.riwayat.size() - 1]]) &&
+        (adminTransisi(request.resource.data) || teknisiTransisi(request.resource.data) || pelaporTransisi(request.resource.data));
+      allow delete: if false;
+    }
+  }
+}

@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import '../../models/app_user.dart';
 import '../../models/laporan.dart';
 import '../../providers/laporan_provider.dart';
-import '../../theme/app_theme.dart';
 import 'tambah_teknisi_page.dart';
 
 /// Admin: daftar akun teknisi + tombol untuk menambah akun baru.
@@ -33,26 +32,26 @@ class KelolaTeknisiPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text(
           'Kelola Teknisi',
-          style: TextStyle(fontWeight: FontWeight.w700),
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        backgroundColor: AppColors.forestGreen,
-        foregroundColor: Colors.white,
+        backgroundColor: scheme.surface,
+        foregroundColor: scheme.onSurface,
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _tambah(context),
-        backgroundColor: AppColors.forestGreen,
-        foregroundColor: Colors.white,
-        elevation: 2.5,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        icon: const Icon(Icons.person_add_alt_1_rounded),
+        backgroundColor: scheme.surface,
+        foregroundColor: scheme.onSurface,
+        icon: const Icon(Icons.person_add_alt),
         label: const Text(
           'Tambah Teknisi',
-          style: TextStyle(fontWeight: FontWeight.w700),
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
       // Jumlah tugas per teknisi ikut diperbarui saat provider berubah.
@@ -64,7 +63,7 @@ class KelolaTeknisiPage extends StatelessWidget {
               builder: (context, snap) {
                 if (snap.hasError) {
                   return _Pesan(
-                    ikon: Icons.error_outline_rounded,
+                    ikon: Icons.error_outline,
                     teks: 'Gagal memuat daftar teknisi.\n${snap.error}',
                   );
                 }
@@ -95,13 +94,13 @@ class KelolaTeknisiPage extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
                   children: [
                     Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.only(bottom: 10),
                       child: Text(
                         '${daftar.length} teknisi terdaftar',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.deepForest,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey.shade700,
                         ),
                       ),
                     ),
@@ -142,23 +141,12 @@ class _Pesan extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.softSage.withValues(alpha: 0.4),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(ikon, size: 40, color: AppColors.forestGreen),
-            ),
-            const SizedBox(height: 14),
+            Icon(ikon, size: 48, color: Colors.grey.shade400),
+            const SizedBox(height: 12),
             Text(
               teks,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                height: 1.4,
-                fontSize: 13.5,
-              ),
+              style: TextStyle(color: Colors.grey.shade600, height: 1.4),
             ),
           ],
         ),
@@ -196,7 +184,7 @@ class _KartuTeknisi extends StatelessWidget {
       messenger.showSnackBar(
         SnackBar(
           content: Text('Tautan reset password dikirim ke ${teknisi.email}.'),
-          backgroundColor: AppColors.success,
+          backgroundColor: const Color(0xFF257054),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -204,7 +192,7 @@ class _KartuTeknisi extends StatelessWidget {
       messenger.showSnackBar(
         SnackBar(
           content: Text('Gagal mengirim tautan reset: $e'),
-          backgroundColor: AppColors.error,
+          backgroundColor: const Color(0xFFAC3838),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -213,35 +201,27 @@ class _KartuTeknisi extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 10),
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: AppColors.borderSubtle, width: 1),
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 14, 8, 14),
+        padding: const EdgeInsets.fromLTRB(14, 14, 6, 14),
         child: Row(
           children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: AppColors.softSage.withValues(alpha: 0.5),
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: AppColors.sageGreen.withValues(alpha: 0.3),
-                ),
-              ),
-              child: Center(
-                child: Text(
-                  _inisial(teknisi.nama),
-                  style: const TextStyle(
-                    color: AppColors.forestGreen,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 16,
-                  ),
+            CircleAvatar(
+              radius: 22,
+              backgroundColor: scheme.primary.withValues(alpha: 0.12),
+              child: Text(
+                _inisial(teknisi.nama),
+                style: TextStyle(
+                  color: scheme.primary,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ),
@@ -255,9 +235,8 @@ class _KartuTeknisi extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w600,
                       fontSize: 14.5,
-                      color: AppColors.deepForest,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -265,21 +244,16 @@ class _KartuTeknisi extends StatelessWidget {
                     teknisi.email,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.textSecondary,
-                    ),
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                   ),
-                  if (teknisi.telepon != null) ...[
-                    const SizedBox(height: 1),
+                  if (teknisi.telepon != null)
                     Text(
                       teknisi.telepon!,
-                      style: const TextStyle(
-                        fontSize: 11.5,
-                        color: AppColors.textMuted,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
                       ),
                     ),
-                  ],
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
@@ -287,13 +261,11 @@ class _KartuTeknisi extends StatelessWidget {
                     children: [
                       _Lencana(
                         teks: '$tugasAktif tugas aktif',
-                        warna: AppColors.statusMenunggu,
-                        latar: AppColors.statusMenungguBg,
+                        warna: const Color(0xFF94620E),
                       ),
                       _Lencana(
                         teks: '$tugasSelesai selesai',
-                        warna: AppColors.statusSelesai,
-                        latar: AppColors.statusSelesaiBg,
+                        warna: const Color(0xFF257054),
                       ),
                     ],
                   ),
@@ -302,27 +274,13 @@ class _KartuTeknisi extends StatelessWidget {
             ),
             PopupMenuButton<String>(
               tooltip: 'Aksi',
-              iconColor: AppColors.textMuted,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
               onSelected: (v) {
                 if (v == 'reset') _kirimReset(context);
               },
               itemBuilder: (_) => const [
                 PopupMenuItem(
                   value: 'reset',
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.lock_reset_rounded,
-                        size: 18,
-                        color: AppColors.forestGreen,
-                      ),
-                      SizedBox(width: 8),
-                      Text('Kirim reset password'),
-                    ],
-                  ),
+                  child: Text('Kirim reset password'),
                 ),
               ],
             ),
@@ -336,28 +294,22 @@ class _KartuTeknisi extends StatelessWidget {
 class _Lencana extends StatelessWidget {
   final String teks;
   final Color warna;
-  final Color latar;
 
-  const _Lencana({
-    required this.teks,
-    required this.warna,
-    required this.latar,
-  });
+  const _Lencana({required this.teks, required this.warna});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: latar,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: warna.withValues(alpha: 0.25), width: 0.8),
+        color: warna.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
         teks,
         style: TextStyle(
           fontSize: 10.5,
-          fontWeight: FontWeight.w700,
+          fontWeight: FontWeight.w600,
           color: warna,
         ),
       ),

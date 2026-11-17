@@ -4,20 +4,23 @@ import '../../models/app_user.dart';
 import '../../models/laporan.dart';
 import '../../providers/laporan_provider.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/sla_chip.dart';
 import '../shared/detail_laporan_page.dart';
 import '../shared/notifikasi_page.dart';
 import 'buat_laporan_page.dart';
 
+/// Tata letak dari AlhamSaragih, branch feature/pembaruan-ui (d63ebe2, 454065a).
+/// Palet hijau Alham dipakai bersama integrasi Firebase/foto lokal.
 class HomePage extends StatelessWidget {
   final LaporanProvider provider;
   final AppUser user;
-  final VoidCallback onBuatLaporan;
+  final VoidCallback onLihatLaporan;
 
   const HomePage({
     super.key,
     required this.provider,
     required this.user,
-    required this.onBuatLaporan,
+    required this.onLihatLaporan,
   });
 
   static String _inisial(String nama) {
@@ -56,13 +59,21 @@ class HomePage extends StatelessWidget {
       backgroundColor: AppColors.background,
       body: CustomScrollView(
         slivers: [
-          // Header SliverAppBar with Natural Forest Gradient
+          // Header adaptasi desain Alham dengan palet hijau Alham
           SliverAppBar(
-            expandedHeight: 200,
+            expandedHeight: 260,
             floating: false,
             pinned: true,
             backgroundColor: AppColors.forestGreen,
             foregroundColor: Colors.white,
+            title: const Text(
+              'Pengaduan Kampus',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
                 decoration: const BoxDecoration(
@@ -74,47 +85,47 @@ class HomePage extends StatelessWidget {
                 ),
                 child: SafeArea(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                    padding: const EdgeInsets.fromLTRB(
+                      20,
+                      kToolbarHeight + 16,
+                      20,
+                      20,
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Text(
-                                      'Selamat Datang',
-                                      style: TextStyle(
-                                        color: Colors.white.withValues(
-                                          alpha: 0.85,
-                                        ),
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w500,
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Selamat datang',
+                                    style: TextStyle(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.85,
                                       ),
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
                                     ),
-                                    const SizedBox(width: 4),
-                                    const Text(
-                                      '👋',
-                                      style: TextStyle(fontSize: 13),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  user.nama,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: -0.2,
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    user.nama,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
+                            const SizedBox(width: 12),
                             Container(
                               padding: const EdgeInsets.all(2),
                               decoration: BoxDecoration(
@@ -170,15 +181,6 @@ class HomePage extends StatelessWidget {
                   ),
                 ),
               ),
-              title: const Text(
-                'Pengaduan Kampus',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              titlePadding: const EdgeInsets.only(left: 20, bottom: 14),
             ),
             actions: [
               IconButton(
@@ -254,7 +256,7 @@ class HomePage extends StatelessWidget {
                     children: [
                       Expanded(
                         child: _QuickActionCard(
-                          icon: Icons.add_circle_outline_rounded,
+                          icon: Icons.add_circle_outline,
                           label: 'Buat Laporan',
                           color: AppColors.forestGreen,
                           onTap: () => Navigator.of(context).push(
@@ -270,10 +272,10 @@ class HomePage extends StatelessWidget {
                       const SizedBox(width: 12),
                       Expanded(
                         child: _QuickActionCard(
-                          icon: Icons.search_rounded,
+                          icon: Icons.search,
                           label: 'Cari Laporan',
                           color: AppColors.mutedTeal,
-                          onTap: onBuatLaporan,
+                          onTap: onLihatLaporan,
                         ),
                       ),
                     ],
@@ -282,8 +284,11 @@ class HomePage extends StatelessWidget {
                   const SizedBox(height: 26),
 
                   // Header Laporan Terbaru
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 16,
+                    runSpacing: 4,
                     children: [
                       const Text(
                         'Laporan Terbaru',
@@ -294,18 +299,19 @@ class HomePage extends StatelessWidget {
                         ),
                       ),
                       TextButton(
-                        onPressed: onBuatLaporan,
+                        onPressed: onLihatLaporan,
                         style: TextButton.styleFrom(
                           foregroundColor: AppColors.forestGreen,
                         ),
                         child: const Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
                               'Lihat Semua',
                               style: TextStyle(fontWeight: FontWeight.w700),
                             ),
                             SizedBox(width: 2),
-                            Icon(Icons.arrow_forward_rounded, size: 16),
+                            Icon(Icons.arrow_forward, size: 16),
                           ],
                         ),
                       ),
@@ -348,7 +354,7 @@ class HomePage extends StatelessWidget {
                       ),
                       const SizedBox(height: 6),
                       const Text(
-                        'Ketuk tombol "+ Buat Laporan" untuk melaporkan kerusakan fasilitas kampus.',
+                        'Pilih Buat Laporan untuk melaporkan kerusakan fasilitas kampus.',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: AppColors.textSecondary,
@@ -601,6 +607,8 @@ class _LaporanCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 8),
+              SlaChip(laporan: laporan),
+              const SizedBox(height: 8),
               Text(
                 laporan.deskripsi,
                 style: const TextStyle(
@@ -633,7 +641,7 @@ class _LaporanCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   const Icon(
-                    Icons.access_time_rounded,
+                    Icons.schedule_outlined,
                     size: 13,
                     color: AppColors.textMuted,
                   ),

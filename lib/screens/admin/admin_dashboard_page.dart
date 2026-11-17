@@ -8,7 +8,8 @@ import '../../widgets/sla_chip.dart';
 import '../shared/detail_laporan_page.dart';
 import '../shared/notifikasi_page.dart';
 
-/// Beranda admin fasilitas: antrian kerja (verifikasi, penugasan, SLA).
+/// Tata letak dari AlhamSaragih, feature/pembaruan-ui (d63ebe2, 454065a).
+/// Beranda admin fasilitas: antrean kerja (verifikasi, penugasan, SLA).
 class AdminDashboardPage extends StatelessWidget {
   final LaporanProvider provider;
   final AppUser user;
@@ -60,7 +61,9 @@ class AdminDashboardPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text(
           'Beranda Admin Fasilitas',
-          style: TextStyle(fontWeight: FontWeight.w700),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
         ),
         backgroundColor: AppColors.forestGreen,
         foregroundColor: Colors.white,
@@ -79,7 +82,7 @@ class AdminDashboardPage extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // Header Card with Deep Forest & Forest Green Gradient
+          // Kartu sambutan adaptasi desain Alham
           Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
@@ -104,7 +107,7 @@ class AdminDashboardPage extends StatelessWidget {
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
-                    Icons.admin_panel_settings_rounded,
+                    Icons.admin_panel_settings_outlined,
                     color: Colors.white,
                     size: 32,
                   ),
@@ -115,7 +118,7 @@ class AdminDashboardPage extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Halo, ${user.nama}',
+                        'Selamat datang, ${user.nama}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -127,7 +130,7 @@ class AdminDashboardPage extends StatelessWidget {
                       const SizedBox(height: 3),
                       Text(
                         perluVerifikasi + perluDitugaskan == 0
-                            ? 'Semua laporan sudah tertangani dengan baik.'
+                            ? 'Tidak ada laporan yang menunggu verifikasi atau penugasan.'
                             : '${perluVerifikasi + perluDitugaskan} laporan butuh penanganan segera.',
                         style: TextStyle(
                           color: Colors.white.withValues(alpha: 0.88),
@@ -193,8 +196,11 @@ class AdminDashboardPage extends StatelessWidget {
           const SizedBox(height: 22),
 
           // Header Section Perlu Tindakan
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 16,
+            runSpacing: 4,
             children: [
               const Text(
                 'Perlu Tindakan Cepat',
@@ -210,13 +216,14 @@ class AdminDashboardPage extends StatelessWidget {
                   foregroundColor: AppColors.forestGreen,
                 ),
                 child: const Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       'Semua Laporan',
                       style: TextStyle(fontWeight: FontWeight.w700),
                     ),
                     SizedBox(width: 2),
-                    Icon(Icons.arrow_forward_rounded, size: 16),
+                    Icon(Icons.arrow_forward, size: 16),
                   ],
                 ),
               ),
@@ -241,7 +248,7 @@ class AdminDashboardPage extends StatelessWidget {
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
-                      Icons.task_alt_rounded,
+                      Icons.task_alt,
                       size: 38,
                       color: AppColors.forestGreen,
                     ),
@@ -452,10 +459,7 @@ class _BarisAntrian extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: AppColors.textMuted,
-              ),
+              const Icon(Icons.chevron_right, color: AppColors.textMuted),
             ],
           ),
         ),

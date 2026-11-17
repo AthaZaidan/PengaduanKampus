@@ -33,7 +33,7 @@ class _AdminShellState extends State<AdminShell> {
       TabNav(
         'Beranda',
         Icons.dashboard_outlined,
-        Icons.dashboard_rounded,
+        Icons.dashboard_outlined,
         AdminDashboardPage(
           provider: p,
           user: u,
@@ -43,25 +43,25 @@ class _AdminShellState extends State<AdminShell> {
       TabNav(
         'Laporan',
         Icons.list_alt_outlined,
-        Icons.list_alt_rounded,
+        Icons.list_alt_outlined,
         AdminLaporanPage(provider: p, user: u),
       ),
       TabNav(
         'Statistik',
         Icons.bar_chart_outlined,
-        Icons.bar_chart_rounded,
+        Icons.bar_chart_outlined,
         StatistikPage(provider: p, user: u),
       ),
       TabNav(
         'Teknisi',
         Icons.engineering_outlined,
-        Icons.engineering_rounded,
+        Icons.engineering_outlined,
         KelolaTeknisiPage(provider: p, user: u),
       ),
       TabNav(
         'Profil',
-        Icons.person_outline_rounded,
-        Icons.person_rounded,
+        Icons.person_outline,
+        Icons.person_outline,
         ProfilePage(provider: p, user: u),
       ),
     ];

@@ -30,19 +30,19 @@ class _TeknisiShellState extends State<TeknisiShell> {
       TabNav(
         'Tugas',
         Icons.assignment_outlined,
-        Icons.assignment_rounded,
+        Icons.assignment_outlined,
         TeknisiTugasPage(provider: p, user: u),
       ),
       TabNav(
         'Kinerja',
         Icons.bar_chart_outlined,
-        Icons.bar_chart_rounded,
+        Icons.bar_chart_outlined,
         TeknisiKinerjaPage(provider: p, user: u),
       ),
       TabNav(
         'Profil',
-        Icons.person_outline_rounded,
-        Icons.person_rounded,
+        Icons.person_outline,
+        Icons.person_outline,
         ProfilePage(provider: p, user: u),
       ),
     ];

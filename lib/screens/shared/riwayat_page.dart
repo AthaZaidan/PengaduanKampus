@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../models/app_user.dart';
 import '../../models/laporan.dart';
+import '../../models/filter_laporan.dart';
 import '../../providers/laporan_provider.dart';
-import '../../theme/app_theme.dart';
-import '../../widgets/sla_chip.dart';
+import '../../widgets/komponen_kampus.dart';
 import 'detail_laporan_page.dart';
 
 /// Satu tab pada daftar laporan. [status] null berarti semua status.
@@ -57,18 +57,143 @@ class _RiwayatPageState extends State<RiwayatPage>
     super.dispose();
   }
 
-  List<Laporan> _filter(List<Laporan> list) {
-    if (_query.isEmpty) return list;
-    final q = _query.toLowerCase();
-    return list.where((l) {
-      return l.judul.toLowerCase().contains(q) ||
-          l.lokasi.toLowerCase().contains(q) ||
-          l.id.toLowerCase().contains(q);
-    }).toList();
+  FilterLaporan _pilihan = const FilterLaporan();
+  List<Laporan> _filter(List<Laporan> list) => _pilihan.terapkan(list, _query);
+
+  Future<void> _aturFilter() async {
+    var kategori = _pilihan.kategori;
+    var prioritas = _pilihan.prioritas;
+    var urutan = _pilihan.urutan;
+    DateTimeRange? tanggal = _pilihan.mulai == null
+        ? null
+        : DateTimeRange(start: _pilihan.mulai!, end: _pilihan.sampai!);
+    final hasil = await showModalBottomSheet<FilterLaporan>(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, ubah) => SafeArea(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(
+              20,
+              20,
+              20,
+              MediaQuery.viewInsetsOf(ctx).bottom + 20,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Filter laporan',
+                  style: Theme.of(ctx).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 20),
+                DropdownButtonFormField<String>(
+                  initialValue: kategori?.name ?? '',
+                  isExpanded: true,
+                  decoration: const InputDecoration(labelText: 'Kategori'),
+                  items: [
+                    const DropdownMenuItem(
+                      value: '',
+                      child: Text('Semua kategori'),
+                    ),
+                    for (final k in KategoriKerusakan.values)
+                      DropdownMenuItem(value: k.name, child: Text(k.label)),
+                  ],
+                  onChanged: (v) => ubah(
+                    () => kategori = v == ''
+                        ? null
+                        : KategoriKerusakan.values.byName(v!),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue: prioritas?.name ?? '',
+                  isExpanded: true,
+                  decoration: const InputDecoration(labelText: 'Prioritas'),
+                  items: [
+                    const DropdownMenuItem(
+                      value: '',
+                      child: Text('Semua prioritas'),
+                    ),
+                    for (final p in PrioritasLaporan.values)
+                      DropdownMenuItem(value: p.name, child: Text(p.label)),
+                  ],
+                  onChanged: (v) => ubah(
+                    () => prioritas = v == ''
+                        ? null
+                        : PrioritasLaporan.values.byName(v!),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<UrutanLaporan>(
+                  initialValue: urutan,
+                  isExpanded: true,
+                  decoration: const InputDecoration(labelText: 'Urutkan'),
+                  items: const [
+                    DropdownMenuItem(
+                      value: UrutanLaporan.terbaru,
+                      child: Text('Terbaru'),
+                    ),
+                    DropdownMenuItem(
+                      value: UrutanLaporan.terlama,
+                      child: Text('Terlama'),
+                    ),
+                    DropdownMenuItem(
+                      value: UrutanLaporan.prioritas,
+                      child: Text('Prioritas tertinggi'),
+                    ),
+                  ],
+                  onChanged: (v) => ubah(() => urutan = v!),
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.date_range_outlined),
+                  label: Text(
+                    tanggal == null
+                        ? 'Pilih rentang tanggal'
+                        : '${tanggal!.start.toString().split(' ').first} - ${tanggal!.end.toString().split(' ').first}',
+                  ),
+                  onPressed: () async {
+                    final t = await showDateRangePicker(
+                      context: ctx,
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime.now().add(const Duration(days: 1)),
+                      initialDateRange: tanggal,
+                    );
+                    if (t != null) ubah(() => tanggal = t);
+                  },
+                ),
+                const SizedBox(height: 16),
+                FilledButton(
+                  onPressed: () => Navigator.pop(
+                    ctx,
+                    FilterLaporan(
+                      kategori: kategori,
+                      prioritas: prioritas,
+                      urutan: urutan,
+                      mulai: tanggal?.start,
+                      sampai: tanggal?.end,
+                    ),
+                  ),
+                  child: const Text('Terapkan'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, const FilterLaporan()),
+                  child: const Text('Reset filter'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    if (hasil != null && mounted) setState(() => _pilihan = hasil);
   }
 
   @override
   Widget build(BuildContext context) {
+    // Rebuild otomatis setiap provider memanggil notifyListeners().
     return ListenableBuilder(
       listenable: widget.provider,
       builder: (context, _) => _buildContent(context),
@@ -76,23 +201,32 @@ class _RiwayatPageState extends State<RiwayatPage>
   }
 
   Widget _buildContent(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final sumber = widget.provider.untuk(widget.user);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
           widget.judul,
-          style: const TextStyle(fontWeight: FontWeight.w700),
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
-        backgroundColor: AppColors.forestGreen,
-        foregroundColor: Colors.white,
+        backgroundColor: scheme.surface,
+        foregroundColor: scheme.onSurface,
+        actions: [
+          IconButton(
+            tooltip: 'Filter laporan',
+            icon: Icon(
+              _pilihan.aktif ? Icons.filter_alt : Icons.filter_alt_outlined,
+            ),
+            onPressed: _aturFilter,
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          indicatorColor: Colors.white,
-          indicatorWeight: 3,
+          labelColor: scheme.primary,
+          unselectedLabelColor: scheme.onSurfaceVariant,
+          indicatorColor: scheme.primary,
           isScrollable: true,
           tabAlignment: TabAlignment.start,
           tabs: [
@@ -104,27 +238,16 @@ class _RiwayatPageState extends State<RiwayatPage>
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Cari berdasarkan judul, lokasi, atau ID...',
-                hintStyle: const TextStyle(
-                  color: AppColors.textMuted,
-                  fontSize: 13,
-                ),
-                prefixIcon: const Icon(
-                  Icons.search_rounded,
-                  color: AppColors.sageGreen,
-                  size: 22,
-                ),
+                hintText: 'Cari judul, lokasi, atau nomor',
+                hintStyle: TextStyle(color: Colors.grey.shade400),
+                prefixIcon: const Icon(Icons.search),
                 suffixIcon: _query.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(
-                          Icons.close_rounded,
-                          color: AppColors.textMuted,
-                          size: 18,
-                        ),
+                        icon: const Icon(Icons.close),
                         onPressed: () {
                           _searchController.clear();
                           setState(() => _query = '');
@@ -138,24 +261,32 @@ class _RiwayatPageState extends State<RiwayatPage>
                   vertical: 12,
                 ),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: const BorderSide(color: AppColors.borderSubtle),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: const BorderSide(color: AppColors.borderSubtle),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: const BorderSide(
-                    color: AppColors.forestGreen,
-                    width: 1.5,
-                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
                 ),
               ),
               onChanged: (v) => setState(() => _query = v),
             ),
           ),
+          if (_pilihan.aktif)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Filter tambahan aktif',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () =>
+                        setState(() => _pilihan = const FilterLaporan()),
+                    child: const Text('Reset'),
+                  ),
+                ],
+              ),
+            ),
           Expanded(
             child: TabBarView(
               controller: _tabController,
@@ -175,25 +306,26 @@ class _RiwayatPageState extends State<RiwayatPage>
   }
 
   Tab _buildTab(String label, int count, [Color? color]) {
+    final scheme = Theme.of(context).colorScheme;
     return Tab(
       child: Row(
         children: [
           Text(label),
           const SizedBox(width: 6),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
             decoration: BoxDecoration(
               color: color != null
-                  ? color.withValues(alpha: 0.3)
-                  : Colors.white.withValues(alpha: 0.22),
+                  ? color.withValues(alpha: 0.25)
+                  : scheme.primary.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Text(
               '$count',
               style: TextStyle(
-                fontSize: 10.5,
-                fontWeight: FontWeight.w700,
-                color: color ?? Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: color ?? scheme.primary,
               ),
             ),
           ),
@@ -217,42 +349,12 @@ class _LaporanList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (list.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.softSage.withValues(alpha: 0.35),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.folder_open_outlined,
-                  size: 44,
-                  color: AppColors.sageGreen,
-                ),
-              ),
-              const SizedBox(height: 14),
-              const Text(
-                'Tidak Ada Laporan',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.deepForest,
-                ),
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                'Belum ada laporan yang sesuai dengan kategori ini.',
-                style: TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 12.5,
-                ),
-              ),
-            ],
+      return const Center(
+        child: SingleChildScrollView(
+          child: KeadaanKosong(
+            judul: 'Tidak ada laporan',
+            keterangan: 'Belum ada laporan pada daftar ini. Coba tab lain atau sesuaikan pencarian.',
+            ikon: Icons.folder_open_outlined,
           ),
         ),
       );
@@ -263,7 +365,7 @@ class _LaporanList extends StatelessWidget {
       itemCount: list.length,
       itemBuilder: (context, index) {
         final laporan = list[index];
-        return _RiwayatCard(
+        return KartuLaporan(
           laporan: laporan,
           tampilkanInternal: !user.peran.isPelapor,
           onTap: () => Navigator.of(context).push(
@@ -277,230 +379,6 @@ class _LaporanList extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-}
-
-class _RiwayatCard extends StatelessWidget {
-  final Laporan laporan;
-  final VoidCallback onTap;
-
-  /// Admin / teknisi: tampilkan teknisi dan SLA.
-  final bool tampilkanInternal;
-
-  const _RiwayatCard({
-    required this.laporan,
-    required this.onTap,
-    this.tampilkanInternal = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 10),
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: AppColors.borderSubtle, width: 1),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppColors.softSage.withValues(alpha: 0.45),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  laporan.kategori.icon,
-                  size: 22,
-                  color: AppColors.forestGreen,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      laporan.judul,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14,
-                        color: AppColors.deepForest,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.location_on_outlined,
-                          size: 13,
-                          color: AppColors.textMuted,
-                        ),
-                        const SizedBox(width: 2),
-                        Expanded(
-                          child: Text(
-                            laporan.lokasi,
-                            style: const TextStyle(
-                              fontSize: 11.5,
-                              color: AppColors.textSecondary,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        Text(
-                          laporan.id,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: AppColors.textMuted,
-                            fontFamily: 'monospace',
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          width: 3,
-                          height: 3,
-                          decoration: const BoxDecoration(
-                            color: AppColors.textMuted,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        // Prioritas: dot indicator + label teks (tanpa pill latar)
-                        Container(
-                          width: 7,
-                          height: 7,
-                          decoration: BoxDecoration(
-                            color: laporan.prioritas.color,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 3),
-                        Text(
-                          laporan.prioritas.label,
-                          style: TextStyle(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w600,
-                            color: laporan.prioritas.color,
-                          ),
-                        ),
-                        if (laporan.foto.isNotEmpty) ...[
-                          const SizedBox(width: 8),
-                          const Icon(
-                            Icons.photo_camera_outlined,
-                            size: 12,
-                            color: AppColors.textMuted,
-                          ),
-                          const SizedBox(width: 2),
-                          Text(
-                            '${laporan.foto.length}',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: AppColors.textMuted,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                    if (tampilkanInternal) ...[
-                      const SizedBox(height: 6),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 4,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          if (laporan.teknisiNama != null)
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.engineering_outlined,
-                                  size: 13,
-                                  color: AppColors.sageGreen,
-                                ),
-                                const SizedBox(width: 3),
-                                Text(
-                                  laporan.teknisiNama!,
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.deepForest,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          SlaChip(laporan: laporan),
-                        ],
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: laporan.status.backgroundColor,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: laporan.status.color.withValues(alpha: 0.25),
-                        width: 0.8,
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          laporan.status.icon,
-                          size: 11,
-                          color: laporan.status.color,
-                        ),
-                        const SizedBox(width: 3),
-                        Text(
-                          laporan.status.label,
-                          style: TextStyle(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w700,
-                            color: laporan.status.color,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Icon(
-                    Icons.chevron_right_rounded,
-                    color: AppColors.textMuted,
-                    size: 18,
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

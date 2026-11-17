@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
@@ -20,12 +21,14 @@ class RiwayatStatus {
   final StatusLaporan status;
   final DateTime waktu;
   final String oleh;
+  final String? olehId;
   final String? catatan;
 
   const RiwayatStatus({
     required this.status,
     required this.waktu,
     required this.oleh,
+    this.olehId,
     this.catatan,
   });
 }
@@ -35,6 +38,7 @@ class Laporan {
   final String judul;
   final String deskripsi;
   final String lokasi;
+  bool dikonfirmasi;
   final KategoriKerusakan kategori;
   final PrioritasLaporan prioritas;
   final String pelapor;
@@ -52,8 +56,13 @@ class Laporan {
   /// Foto lampiran pelapor = foto SEBELUM penanganan.
   final List<Uint8List> foto;
 
-  /// Foto SESUDAH penanganan (diunggah teknisi saat menyelesaikan).
+  /// Foto SESUDAH penanganan (disimpan lokal saat teknisi menyelesaikan).
   final List<Uint8List> fotoSesudah;
+
+  /// Referensi foto lokal relatif; hanya teks path yang masuk Firestore, bukan gambar.
+  final List<String> fotoPaths;
+  final List<String> fotoSesudahPaths;
+  final int revisi;
 
   /// Timeline perubahan status, urut dari yang paling lama ke terbaru.
   final List<RiwayatStatus> riwayat;
@@ -63,6 +72,7 @@ class Laporan {
     required this.judul,
     required this.deskripsi,
     required this.lokasi,
+    this.dikonfirmasi = false,
     required this.kategori,
     required this.prioritas,
     required this.pelapor,
@@ -74,8 +84,13 @@ class Laporan {
     this.teknisiNama,
     List<Uint8List>? foto,
     List<Uint8List>? fotoSesudah,
+    List<String>? fotoPaths,
+    List<String>? fotoSesudahPaths,
+    this.revisi = 0,
     List<RiwayatStatus>? riwayat,
   }) : foto = foto ?? const [],
+       fotoPaths = fotoPaths ?? <String>[],
+       fotoSesudahPaths = fotoSesudahPaths ?? <String>[],
        fotoSesudah = fotoSesudah ?? <Uint8List>[],
        riwayat =
            riwayat ??
@@ -88,14 +103,86 @@ class Laporan {
              ),
            ];
 
+  int get jumlahFoto => foto.length + fotoPaths.length;
+  int get jumlahFotoSesudah => fotoSesudah.length + fotoSesudahPaths.length;
+
+  Map<String, dynamic> toFirestore() => {
+    'judul': judul,
+    'deskripsi': deskripsi,
+    'lokasi': lokasi,
+    'dikonfirmasi': dikonfirmasi,
+    'kategori': kategori.name,
+    'prioritas': prioritas.name,
+    'pelapor': pelapor,
+    'pelaporId': pelaporId,
+    'tanggalLapor': Timestamp.fromDate(tanggalLapor),
+    'status': status.name,
+    'catatanAdmin': catatanAdmin,
+    'teknisiId': teknisiId,
+    'teknisiNama': teknisiNama,
+    'fotoPaths': fotoPaths,
+    'fotoSesudahPaths': fotoSesudahPaths,
+    'revisi': revisi,
+    'riwayat': riwayat
+        .map(
+          (r) => {
+            'status': r.status.name,
+            'waktu': Timestamp.fromDate(r.waktu),
+            'oleh': r.oleh,
+            'olehId': r.olehId,
+            'catatan': r.catatan,
+          },
+        )
+        .toList(),
+  };
+
+  factory Laporan.fromFirestore(String id, Map<String, dynamic> data) {
+    return Laporan(
+      id: id,
+      judul: data['judul'] as String,
+      deskripsi: data['deskripsi'] as String,
+      lokasi: data['lokasi'] as String,
+      dikonfirmasi: data['dikonfirmasi'] as bool? ?? false,
+      kategori: KategoriKerusakan.values.byName(data['kategori'] as String),
+      prioritas: PrioritasLaporan.values.byName(data['prioritas'] as String),
+      pelapor: data['pelapor'] as String,
+      pelaporId: data['pelaporId'] as String?,
+      tanggalLapor: (data['tanggalLapor'] as Timestamp).toDate(),
+      status: StatusLaporan.values.byName(data['status'] as String),
+      catatanAdmin: data['catatanAdmin'] as String?,
+      teknisiId: data['teknisiId'] as String?,
+      teknisiNama: data['teknisiNama'] as String?,
+      fotoPaths: List<String>.from(data['fotoPaths'] as List? ?? []),
+      fotoSesudahPaths: List<String>.from(
+        data['fotoSesudahPaths'] as List? ?? [],
+      ),
+      revisi: data['revisi'] as int? ?? 0,
+      riwayat: (data['riwayat'] as List).map((item) {
+        final r = Map<String, dynamic>.from(item as Map);
+        return RiwayatStatus(
+          status: StatusLaporan.values.byName(r['status'] as String),
+          waktu: (r['waktu'] as Timestamp).toDate(),
+          oleh: r['oleh'] as String,
+          olehId: r['olehId'] as String?,
+          catatan: r['catatan'] as String?,
+        );
+      }).toList(),
+    );
+  }
+
   /// Batas waktu penyelesaian (SLA) berdasarkan prioritas.
   DateTime get batasSla => tanggalLapor.add(prioritas.targetSla);
 
   /// Waktu laporan dinyatakan selesai (null bila belum selesai).
   DateTime? get waktuSelesai {
     DateTime? hasil;
+    StatusLaporan? sebelumnya;
     for (final r in riwayat) {
-      if (r.status == StatusLaporan.selesai) hasil = r.waktu;
+      if (r.status == StatusLaporan.selesai &&
+          sebelumnya != StatusLaporan.selesai) {
+        hasil = r.waktu;
+      }
+      sebelumnya = r.status;
     }
     return hasil;
   }
@@ -158,37 +245,30 @@ extension StatusLaporanExt on StatusLaporan {
     }
   }
 
-  Color get backgroundColor {
-    switch (this) {
-      case StatusLaporan.menunggu:
-        return AppColors.statusMenungguBg;
-      case StatusLaporan.diverifikasi:
-        return AppColors.statusDiverifikasiBg;
-      case StatusLaporan.ditugaskan:
-        return AppColors.statusDitugaskanBg;
-      case StatusLaporan.diproses:
-        return AppColors.statusDiprosesBg;
-      case StatusLaporan.selesai:
-        return AppColors.statusSelesaiBg;
-      case StatusLaporan.ditolak:
-        return AppColors.statusDitolakBg;
-    }
-  }
+  /// Warna latar status dari API model main; tidak memengaruhi data Firestore.
+  Color get backgroundColor => switch (this) {
+    StatusLaporan.menunggu => AppColors.statusMenungguBg,
+    StatusLaporan.diverifikasi => AppColors.statusDiverifikasiBg,
+    StatusLaporan.ditugaskan => AppColors.statusDitugaskanBg,
+    StatusLaporan.diproses => AppColors.statusDiprosesBg,
+    StatusLaporan.selesai => AppColors.statusSelesaiBg,
+    StatusLaporan.ditolak => AppColors.statusDitolakBg,
+  };
 
   IconData get icon {
     switch (this) {
       case StatusLaporan.menunggu:
-        return Icons.hourglass_empty_rounded;
+        return Icons.hourglass_empty;
       case StatusLaporan.diverifikasi:
-        return Icons.verified_rounded;
+        return Icons.verified_outlined;
       case StatusLaporan.ditugaskan:
-        return Icons.assignment_ind_rounded;
+        return Icons.assignment_ind_outlined;
       case StatusLaporan.diproses:
-        return Icons.autorenew_rounded;
+        return Icons.sync_outlined;
       case StatusLaporan.selesai:
-        return Icons.check_circle_rounded;
+        return Icons.check_circle_outline;
       case StatusLaporan.ditolak:
-        return Icons.cancel_rounded;
+        return Icons.cancel_outlined;
     }
   }
 
@@ -218,17 +298,17 @@ extension KategoriExt on KategoriKerusakan {
   IconData get icon {
     switch (this) {
       case KategoriKerusakan.fasilitas:
-        return Icons.chair_alt_rounded;
+        return Icons.chair_alt_outlined;
       case KategoriKerusakan.listrik:
-        return Icons.bolt_rounded;
+        return Icons.bolt_outlined;
       case KategoriKerusakan.airBersih:
-        return Icons.water_drop_rounded;
+        return Icons.water_drop_outlined;
       case KategoriKerusakan.internet:
-        return Icons.wifi_rounded;
+        return Icons.wifi_outlined;
       case KategoriKerusakan.kebersihan:
-        return Icons.cleaning_services_rounded;
+        return Icons.cleaning_services_outlined;
       case KategoriKerusakan.lainnya:
-        return Icons.more_horiz_rounded;
+        return Icons.more_horiz;
     }
   }
 }
@@ -245,25 +325,20 @@ extension PrioritasExt on PrioritasLaporan {
     }
   }
 
+  Color get backgroundColor => switch (this) {
+    PrioritasLaporan.rendah => const Color(0xFFF1F3F5),
+    PrioritasLaporan.sedang => AppColors.statusMenungguBg,
+    PrioritasLaporan.tinggi => AppColors.statusDitolakBg,
+  };
+
   Color get color {
     switch (this) {
       case PrioritasLaporan.rendah:
-        return AppColors.sageGreen;
+        return const Color(0xFF6B7280);
       case PrioritasLaporan.sedang:
-        return AppColors.warning;
+        return AppColors.statusMenunggu;
       case PrioritasLaporan.tinggi:
-        return AppColors.statusDitolak; // Muted Terracotta
-    }
-  }
-
-  Color get backgroundColor {
-    switch (this) {
-      case PrioritasLaporan.rendah:
-        return AppColors.statusSelesaiBg;
-      case PrioritasLaporan.sedang:
-        return AppColors.statusMenungguBg;
-      case PrioritasLaporan.tinggi:
-        return AppColors.statusDitolakBg;
+        return AppColors.statusDitolak;
     }
   }
 }
