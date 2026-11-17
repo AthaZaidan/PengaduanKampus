@@ -271,6 +271,19 @@ class KartuLaporan extends StatelessWidget {
                   color: scheme.onSurfaceVariant,
                 ),
               ),
+              if (laporan.status == StatusLaporan.selesai)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    laporan.dikonfirmasi
+                        ? 'Hasil dikonfirmasi pelapor'
+                        : 'Menunggu konfirmasi pelapor',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
               if (tampilkanInternal) ...[
                 const Divider(height: 24),
                 if (laporan.teknisiNama != null)

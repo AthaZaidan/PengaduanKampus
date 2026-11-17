@@ -8,6 +8,8 @@ import '../../widgets/identitas_kampus.dart';
 import '../../models/laporan.dart';
 import '../../providers/laporan_provider.dart';
 import '../authentication/login_page.dart';
+import '../../services/notifikasi_push_service.dart';
+import '../admin/kelola_lokasi_page.dart';
 
 class ProfilePage extends StatefulWidget {
   final LaporanProvider provider;
@@ -106,6 +108,17 @@ class _ProfilePageState extends State<ProfilePage> {
     );
     if (yakin != true) return;
 
+    try {
+      await NotifikasiPushService.instance.keluar();
+    } catch (_) {
+      if (mounted) {
+        _snack(
+          'Belum dapat menonaktifkan notifikasi perangkat. Periksa koneksi sebelum keluar.',
+          error: true,
+        );
+      }
+      return;
+    }
     // Logout dari Google Sign-In (jika dipakai) dan Firebase Auth
     try {
       await GoogleSignIn().signOut();
@@ -431,6 +444,14 @@ class _ProfilePageState extends State<ProfilePage> {
           padding: const EdgeInsets.symmetric(vertical: 6),
           child: Column(
             children: [
+              if (widget.user.peran.isAdmin)
+                _MenuTile(
+                  ikon: Icons.location_on_outlined,
+                  judul: 'Kelola lokasi kampus',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const KelolaLokasiPage()),
+                  ),
+                ),
               _MenuTile(
                 ikon: Icons.edit_outlined,
                 judul: 'Ubah Nama',

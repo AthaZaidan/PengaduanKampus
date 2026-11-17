@@ -112,9 +112,20 @@ class FirebaseLaporanRepository implements LaporanRepository {
     // Retry dari form yang sama memakai id yang sama sehingga tidak menggandakan laporan.
     final sudah = await ref.get(const GetOptions(source: Source.server));
     if (sudah.exists) {
-      return Laporan.fromFirestore(sudah.id, sudah.data()!);
+      throw StateError(
+        'Laporan ini sudah terkirim. Periksa daftar laporan, lalu hapus draf lama jika masih tampil.',
+      );
     }
-    final paths = await _upload(laporan, laporan.foto, 'sebelum');
+    final foto = <Uint8List>[...laporan.foto];
+    for (final path in laporan.fotoPaths) {
+      if (!path.startsWith('draf/$_uid/')) {
+        throw StateError('Lampiran draf tidak valid.');
+      }
+      final bytes = await _storage.ref(path).getData(5 * 1024 * 1024);
+      if (bytes == null) throw StateError('Foto draf belum tersedia.');
+      foto.add(bytes);
+    }
+    final paths = await _upload(laporan, foto, 'sebelum');
     final data = laporan.toFirestore()
       ..['fotoPaths'] = paths
       ..['createdAt'] = FieldValue.serverTimestamp()
@@ -124,7 +135,11 @@ class FirebaseLaporanRepository implements LaporanRepository {
     try {
       final hasil = await _db.runTransaction<Laporan>((tx) async {
         final snap = await tx.get(ref);
-        if (snap.exists) return Laporan.fromFirestore(snap.id, snap.data()!);
+        if (snap.exists) {
+          throw StateError(
+            'Laporan ini sudah terkirim. Periksa daftar laporan terlebih dahulu.',
+          );
+        }
         tx.set(ref, data);
         return Laporan.fromFirestore(laporan.id, data);
       });

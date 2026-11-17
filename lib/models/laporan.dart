@@ -36,6 +36,7 @@ class Laporan {
   final String judul;
   final String deskripsi;
   final String lokasi;
+  bool dikonfirmasi;
   final KategoriKerusakan kategori;
   final PrioritasLaporan prioritas;
   final String pelapor;
@@ -69,6 +70,7 @@ class Laporan {
     required this.judul,
     required this.deskripsi,
     required this.lokasi,
+    this.dikonfirmasi = false,
     required this.kategori,
     required this.prioritas,
     required this.pelapor,
@@ -106,6 +108,7 @@ class Laporan {
     'judul': judul,
     'deskripsi': deskripsi,
     'lokasi': lokasi,
+    'dikonfirmasi': dikonfirmasi,
     'kategori': kategori.name,
     'prioritas': prioritas.name,
     'pelapor': pelapor,
@@ -137,6 +140,7 @@ class Laporan {
       judul: data['judul'] as String,
       deskripsi: data['deskripsi'] as String,
       lokasi: data['lokasi'] as String,
+      dikonfirmasi: data['dikonfirmasi'] as bool? ?? false,
       kategori: KategoriKerusakan.values.byName(data['kategori'] as String),
       prioritas: PrioritasLaporan.values.byName(data['prioritas'] as String),
       pelapor: data['pelapor'] as String,
@@ -170,8 +174,13 @@ class Laporan {
   /// Waktu laporan dinyatakan selesai (null bila belum selesai).
   DateTime? get waktuSelesai {
     DateTime? hasil;
+    StatusLaporan? sebelumnya;
     for (final r in riwayat) {
-      if (r.status == StatusLaporan.selesai) hasil = r.waktu;
+      if (r.status == StatusLaporan.selesai &&
+          sebelumnya != StatusLaporan.selesai) {
+        hasil = r.waktu;
+      }
+      sebelumnya = r.status;
     }
     return hasil;
   }

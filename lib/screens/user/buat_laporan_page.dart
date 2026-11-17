@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -7,6 +8,9 @@ import '../../models/app_user.dart';
 import '../../models/laporan.dart';
 import '../../providers/laporan_provider.dart';
 import '../../widgets/foto_viewer.dart';
+import '../../widgets/foto_storage.dart';
+import '../../widgets/pilihan_lokasi.dart';
+import '../../services/fitur_laporan_service.dart';
 import '../../services/laporan_repository.dart';
 
 class BuatLaporanPage extends StatefulWidget {
@@ -14,18 +18,21 @@ class BuatLaporanPage extends StatefulWidget {
 
   /// Pelapor yang membuat laporan (nama dan uid dicatat di laporan).
   final AppUser user;
+  final FiturLaporanService? drafService;
 
   const BuatLaporanPage({
     super.key,
     required this.provider,
     required this.user,
+    this.drafService,
   });
 
   @override
   State<BuatLaporanPage> createState() => _BuatLaporanPageState();
 }
 
-class _BuatLaporanPageState extends State<BuatLaporanPage> {
+class _BuatLaporanPageState extends State<BuatLaporanPage>
+    with WidgetsBindingObserver {
   final _formKey = GlobalKey<FormState>();
   final _judulController = TextEditingController();
   final _deskripsiController = TextEditingController();
@@ -39,10 +46,113 @@ class _BuatLaporanPageState extends State<BuatLaporanPage> {
   KategoriKerusakan _kategori = KategoriKerusakan.fasilitas;
   PrioritasLaporan _prioritas = PrioritasLaporan.sedang;
   bool _isLoading = false;
-  late final String _laporanId = widget.provider.generateId();
+  late String _laporanId = widget.provider.generateId();
+
+  final List<String> _fotoPaths = [];
+  FiturLaporanService? _draf;
+  Timer? _timerDraf;
+  bool _memuatDraf = false;
+  bool _drafGagal = false;
+  bool _unggahFoto = false;
+  bool _terkirim = false;
+  String? _pesanDraf;
+  int _versiDraf = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    if (widget.provider.menggunakanFirebase || widget.drafService != null) {
+      _draf = widget.drafService ?? FiturLaporanService(widget.user.uid);
+      _memuatDraf = true;
+      _muatDraf();
+    }
+    for (final c in [
+      _judulController,
+      _deskripsiController,
+      _lokasiController,
+    ]) {
+      c.addListener(_jadwalkanDraf);
+    }
+  }
+
+  Future<void> _muatDraf() async {
+    try {
+      final data = await _draf!.muatDraf();
+      if (!mounted) return;
+      if (data != null) {
+        _laporanId = data['laporanId'] as String;
+        _judulController.text = data['judul'] as String? ?? '';
+        _deskripsiController.text = data['deskripsi'] as String? ?? '';
+        _lokasiController.text = data['lokasi'] as String? ?? '';
+        _kategori = KategoriKerusakan.values.byName(data['kategori'] as String);
+        _prioritas = PrioritasLaporan.values.byName(
+          data['prioritas'] as String,
+        );
+        _fotoPaths.addAll(List<String>.from(data['fotoPaths'] as List? ?? []));
+        _pesanDraf = 'Draf sebelumnya dipulihkan.';
+      }
+    } catch (_) {
+      _drafGagal = true;
+      _pesanDraf = 'Draf belum dapat dimuat. Coba buka form kembali sebelum membuat laporan baru.';
+    } finally {
+      if (mounted) setState(() => _memuatDraf = false);
+    }
+  }
+
+  void _jadwalkanDraf() {
+    if (_draf == null || _drafGagal || _memuatDraf || _terkirim || _isLoading) {
+      return;
+    }
+    _timerDraf?.cancel();
+    _timerDraf = Timer(const Duration(milliseconds: 600), () => _simpanDraf());
+  }
+
+  void _simpanDraf({bool tampilkan = true}) {
+    if (_draf == null || _drafGagal || _memuatDraf || _terkirim) return;
+    _timerDraf?.cancel();
+    final versi = ++_versiDraf;
+    if (tampilkan && mounted) {
+      setState(() => _pesanDraf = 'Draf sedang disinkronkan ke Firebase.');
+    }
+    final data = <String, dynamic>{
+      'laporanId': _laporanId,
+      'judul': _judulController.text,
+      'deskripsi': _deskripsiController.text,
+      'lokasi': _lokasiController.text,
+      'kategori': _kategori.name,
+      'prioritas': _prioritas.name,
+      'fotoPaths': List<String>.of(_fotoPaths),
+    };
+    unawaited(
+      _draf!
+          .simpanDraf(data)
+          .then((_) {
+            if (mounted && versi == _versiDraf && !_terkirim) {
+              setState(() => _pesanDraf = 'Draf tersimpan di Firebase.');
+            }
+          })
+          .catchError((Object e) {
+            if (mounted && versi == _versiDraf) {
+              setState(() => _pesanDraf = pesanGalatFirebase(e));
+            }
+          }),
+    );
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      _simpanDraf(tampilkan: false);
+    }
+  }
 
   @override
   void dispose() {
+    _timerDraf?.cancel();
+    _simpanDraf(tampilkan: false);
+    WidgetsBinding.instance.removeObserver(this);
     _judulController.dispose();
     _deskripsiController.dispose();
     _lokasiController.dispose();
@@ -50,7 +160,8 @@ class _BuatLaporanPageState extends State<BuatLaporanPage> {
   }
 
   void _pilihSumberFoto() {
-    if (_foto.length >= _maxFoto) return;
+    if (_memuatDraf || _drafGagal || _unggahFoto || _isLoading) return;
+    if (_foto.length + _fotoPaths.length >= _maxFoto) return;
 
     showModalBottomSheet<void>(
       context: context,
@@ -96,9 +207,21 @@ class _BuatLaporanPageState extends State<BuatLaporanPage> {
 
       final bytes = await picked.readAsBytes();
       if (!mounted) return;
-      setState(() => _foto.add(bytes));
-    } catch (_) {
+      if (_draf != null) {
+        setState(() => _unggahFoto = true);
+        final path = await _draf!.uploadDraf(bytes);
+        if (!mounted) return;
+        setState(() {
+          _fotoPaths.add(path);
+          _unggahFoto = false;
+        });
+        _simpanDraf();
+      } else {
+        setState(() => _foto.add(bytes));
+      }
+    } catch (error) {
       if (!mounted) return;
+      setState(() => _unggahFoto = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           behavior: SnackBarBehavior.floating,
@@ -107,8 +230,10 @@ class _BuatLaporanPageState extends State<BuatLaporanPage> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
-          content: const Text(
-            'Gagal mengambil foto. Periksa izin kamera/galeri.',
+          content: Text(
+            _draf == null
+                ? 'Gagal mengambil foto. Periksa izin kamera/galeri.'
+                : pesanGalatFirebase(error),
             style: TextStyle(color: Colors.white),
           ),
         ),
@@ -117,7 +242,15 @@ class _BuatLaporanPageState extends State<BuatLaporanPage> {
   }
 
   void _hapusFoto(int index) {
-    setState(() => _foto.removeAt(index));
+    setState(() {
+      if (index < _foto.length) {
+        _foto.removeAt(index);
+      } else {
+        final path = _fotoPaths.removeAt(index - _foto.length);
+        unawaited(_draf!.hapusFotoDraf(path).catchError((Object _) {}));
+      }
+    });
+    _simpanDraf();
   }
 
   void _lihatFoto(int index) {
@@ -125,15 +258,67 @@ class _BuatLaporanPageState extends State<BuatLaporanPage> {
       MaterialPageRoute(
         builder: (_) => FotoViewerPage(
           foto: List<Uint8List>.of(_foto),
+          paths: List<String>.of(_fotoPaths),
           initialIndex: index,
         ),
       ),
     );
   }
 
-  Future<void> _submit() async {
-    if (_isLoading || !_formKey.currentState!.validate()) return;
+  Future<void> _buangDraf() async {
+    final yakin = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Hapus draf?'),
+        content: const Text(
+          'Isi form dan foto draf akan dihapus. Laporan yang sudah dikirim tetap tersimpan.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Hapus draf'),
+          ),
+        ],
+      ),
+    );
+    if (yakin != true || !mounted) return;
+    _timerDraf?.cancel();
+    setState(() => _isLoading = true);
+    try {
+      await _draf!.hapusDraf(laporanId: _laporanId);
+      if (!mounted) return;
+      _judulController.clear();
+      _deskripsiController.clear();
+      _lokasiController.clear();
+      setState(() {
+        _fotoPaths.clear();
+        _foto.clear();
+        _laporanId = widget.provider.generateId();
+        _kategori = KategoriKerusakan.fasilitas;
+        _prioritas = PrioritasLaporan.sedang;
+        _pesanDraf = 'Draf dihapus. Anda dapat membuat laporan baru.';
+      });
+    } catch (e) {
+      if (mounted) setState(() => _pesanDraf = pesanGalatFirebase(e));
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
+  Future<void> _submit() async {
+    if (_isLoading ||
+        _unggahFoto ||
+        _drafGagal ||
+        _memuatDraf ||
+        !_formKey.currentState!.validate()) {
+      return;
+    }
+
+    _timerDraf?.cancel();
     setState(() => _isLoading = true);
 
     final laporan = Laporan(
@@ -147,10 +332,17 @@ class _BuatLaporanPageState extends State<BuatLaporanPage> {
       pelaporId: widget.user.uid,
       tanggalLapor: DateTime.now(),
       foto: List<Uint8List>.of(_foto),
+      fotoPaths: List<String>.of(_fotoPaths),
     );
 
     try {
       await widget.provider.tambahLaporan(laporan);
+      _terkirim = true;
+      if (_draf != null) {
+        unawaited(
+          _draf!.hapusDraf(laporanId: _laporanId).catchError((Object _) {}),
+        );
+      }
     } catch (error) {
       if (!mounted) return;
       setState(() => _isLoading = false);
@@ -192,7 +384,7 @@ class _BuatLaporanPageState extends State<BuatLaporanPage> {
     final scheme = Theme.of(context).colorScheme;
 
     return PopScope(
-      canPop: !_isLoading,
+      canPop: !_isLoading && !_unggahFoto && !_memuatDraf,
       child: Scaffold(
         backgroundColor: const Color(0xFFF5F7FA),
         appBar: AppBar(
@@ -210,6 +402,40 @@ class _BuatLaporanPageState extends State<BuatLaporanPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                if (_memuatDraf || _unggahFoto) const LinearProgressIndicator(),
+                if (_draf != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Text(
+                      _unggahFoto
+                          ? 'Mengunggah foto draf...'
+                          : _pesanDraf ??
+                                'Isi form disimpan otomatis sebagai draf.',
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ),
+                if (_drafGagal)
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _drafGagal = false;
+                        _memuatDraf = true;
+                      });
+                      _muatDraf();
+                    },
+                    child: const Text('Coba pulihkan draf lagi'),
+                  ),
+                if (_draf != null && !_drafGagal)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: _isLoading || _memuatDraf || _unggahFoto
+                          ? null
+                          : _buangDraf,
+                      icon: const Icon(Icons.delete_outline, size: 18),
+                      label: const Text('Hapus draf'),
+                    ),
+                  ),
                 // Info banner
                 Container(
                   padding: const EdgeInsets.all(14),
@@ -240,6 +466,7 @@ class _BuatLaporanPageState extends State<BuatLaporanPage> {
                 const SizedBox(height: 6),
                 TextFormField(
                   controller: _judulController,
+                  enabled: !_memuatDraf && !_drafGagal && !_isLoading,
                   maxLength: 150,
                   decoration: const InputDecoration(
                     hintText: 'Contoh: AC Rusak di Ruang 3.2',
@@ -263,15 +490,23 @@ class _BuatLaporanPageState extends State<BuatLaporanPage> {
                 const SizedBox(height: 6),
                 _KategoriPicker(
                   selected: _kategori,
-                  onSelected: (k) => setState(() => _kategori = k),
+                  onSelected: (k) {
+                    setState(() => _kategori = k);
+                    _jadwalkanDraf();
+                  },
                 ),
                 const SizedBox(height: 16),
 
                 // Lokasi
                 _buildSectionLabel('Lokasi *'),
+                if (widget.provider.menggunakanFirebase)
+                  PilihanLokasi(
+                    onPilih: (nama) => _lokasiController.text = nama,
+                  ),
                 const SizedBox(height: 6),
                 TextFormField(
                   controller: _lokasiController,
+                  enabled: !_memuatDraf && !_drafGagal && !_isLoading,
                   maxLength: 200,
                   decoration: const InputDecoration(
                     hintText: 'Contoh: Gedung B - Lantai 3, Ruang 3.2',
@@ -293,6 +528,7 @@ class _BuatLaporanPageState extends State<BuatLaporanPage> {
                 const SizedBox(height: 6),
                 TextFormField(
                   controller: _deskripsiController,
+                  enabled: !_memuatDraf && !_drafGagal && !_isLoading,
                   maxLength: 5000,
                   maxLines: 5,
                   decoration: const InputDecoration(
@@ -323,8 +559,9 @@ class _BuatLaporanPageState extends State<BuatLaporanPage> {
                 const SizedBox(height: 8),
                 _FotoPicker(
                   foto: _foto,
+                  paths: _fotoPaths,
                   maxFoto: _maxFoto,
-                  onTambah: _pilihSumberFoto,
+                  onTambah: _unggahFoto ? () {} : _pilihSumberFoto,
                   onHapus: _hapusFoto,
                   onLihat: _lihatFoto,
                 ),
@@ -335,7 +572,10 @@ class _BuatLaporanPageState extends State<BuatLaporanPage> {
                 const SizedBox(height: 6),
                 _PrioritasPicker(
                   selected: _prioritas,
-                  onSelected: (p) => setState(() => _prioritas = p),
+                  onSelected: (p) {
+                    setState(() => _prioritas = p);
+                    _jadwalkanDraf();
+                  },
                 ),
                 const SizedBox(height: 28),
 
@@ -348,7 +588,10 @@ class _BuatLaporanPageState extends State<BuatLaporanPage> {
                   ),
                 // Submit Button
                 ElevatedButton(
-                  onPressed: _isLoading ? null : _submit,
+                  onPressed:
+                      _isLoading || _unggahFoto || _drafGagal || _memuatDraf
+                      ? null
+                      : _submit,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: scheme.primary,
                     foregroundColor: Colors.white,
@@ -402,6 +645,7 @@ class _BuatLaporanPageState extends State<BuatLaporanPage> {
 
 class _FotoPicker extends StatelessWidget {
   final List<Uint8List> foto;
+  final List<String> paths;
   final int maxFoto;
   final VoidCallback onTambah;
   final ValueChanged<int> onHapus;
@@ -409,6 +653,7 @@ class _FotoPicker extends StatelessWidget {
 
   const _FotoPicker({
     required this.foto,
+    this.paths = const [],
     required this.maxFoto,
     required this.onTambah,
     required this.onHapus,
@@ -426,7 +671,7 @@ class _FotoPicker extends StatelessWidget {
       child: ListView(
         scrollDirection: Axis.horizontal,
         children: [
-          for (var i = 0; i < foto.length; i++)
+          for (var i = 0; i < foto.length + paths.length; i++)
             Padding(
               padding: const EdgeInsets.only(right: 10),
               child: Stack(
@@ -435,11 +680,15 @@ class _FotoPicker extends StatelessWidget {
                     onTap: () => onLihat(i),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(12),
-                      child: Image.memory(
-                        foto[i],
+                      child: SizedBox(
                         width: _ukuran,
                         height: _ukuran,
-                        fit: BoxFit.cover,
+                        child: i < foto.length
+                            ? Image.memory(foto[i], fit: BoxFit.cover)
+                            : FotoStorage(
+                                path: paths[i - foto.length],
+                                fit: BoxFit.cover,
+                              ),
                       ),
                     ),
                   ),
@@ -466,7 +715,7 @@ class _FotoPicker extends StatelessWidget {
                 ],
               ),
             ),
-          if (foto.length < maxFoto)
+          if (foto.length + paths.length < maxFoto)
             InkWell(
               onTap: onTambah,
               borderRadius: BorderRadius.circular(12),
@@ -490,7 +739,7 @@ class _FotoPicker extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${foto.length}/$maxFoto',
+                      '${foto.length + paths.length}/$maxFoto',
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,

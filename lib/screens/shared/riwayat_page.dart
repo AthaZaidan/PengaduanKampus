@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/app_user.dart';
 import '../../models/laporan.dart';
+import '../../models/filter_laporan.dart';
 import '../../providers/laporan_provider.dart';
 import '../../widgets/komponen_kampus.dart';
 import 'detail_laporan_page.dart';
@@ -56,14 +57,138 @@ class _RiwayatPageState extends State<RiwayatPage>
     super.dispose();
   }
 
-  List<Laporan> _filter(List<Laporan> list) {
-    if (_query.isEmpty) return list;
-    final q = _query.toLowerCase();
-    return list.where((l) {
-      return l.judul.toLowerCase().contains(q) ||
-          l.lokasi.toLowerCase().contains(q) ||
-          l.id.toLowerCase().contains(q);
-    }).toList();
+  FilterLaporan _pilihan = const FilterLaporan();
+  List<Laporan> _filter(List<Laporan> list) => _pilihan.terapkan(list, _query);
+
+  Future<void> _aturFilter() async {
+    var kategori = _pilihan.kategori;
+    var prioritas = _pilihan.prioritas;
+    var urutan = _pilihan.urutan;
+    DateTimeRange? tanggal = _pilihan.mulai == null
+        ? null
+        : DateTimeRange(start: _pilihan.mulai!, end: _pilihan.sampai!);
+    final hasil = await showModalBottomSheet<FilterLaporan>(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, ubah) => SafeArea(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(
+              20,
+              20,
+              20,
+              MediaQuery.viewInsetsOf(ctx).bottom + 20,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Filter laporan',
+                  style: Theme.of(ctx).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 20),
+                DropdownButtonFormField<String>(
+                  initialValue: kategori?.name ?? '',
+                  isExpanded: true,
+                  decoration: const InputDecoration(labelText: 'Kategori'),
+                  items: [
+                    const DropdownMenuItem(
+                      value: '',
+                      child: Text('Semua kategori'),
+                    ),
+                    for (final k in KategoriKerusakan.values)
+                      DropdownMenuItem(value: k.name, child: Text(k.label)),
+                  ],
+                  onChanged: (v) => ubah(
+                    () => kategori = v == ''
+                        ? null
+                        : KategoriKerusakan.values.byName(v!),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue: prioritas?.name ?? '',
+                  isExpanded: true,
+                  decoration: const InputDecoration(labelText: 'Prioritas'),
+                  items: [
+                    const DropdownMenuItem(
+                      value: '',
+                      child: Text('Semua prioritas'),
+                    ),
+                    for (final p in PrioritasLaporan.values)
+                      DropdownMenuItem(value: p.name, child: Text(p.label)),
+                  ],
+                  onChanged: (v) => ubah(
+                    () => prioritas = v == ''
+                        ? null
+                        : PrioritasLaporan.values.byName(v!),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<UrutanLaporan>(
+                  initialValue: urutan,
+                  isExpanded: true,
+                  decoration: const InputDecoration(labelText: 'Urutkan'),
+                  items: const [
+                    DropdownMenuItem(
+                      value: UrutanLaporan.terbaru,
+                      child: Text('Terbaru'),
+                    ),
+                    DropdownMenuItem(
+                      value: UrutanLaporan.terlama,
+                      child: Text('Terlama'),
+                    ),
+                    DropdownMenuItem(
+                      value: UrutanLaporan.prioritas,
+                      child: Text('Prioritas tertinggi'),
+                    ),
+                  ],
+                  onChanged: (v) => ubah(() => urutan = v!),
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.date_range_outlined),
+                  label: Text(
+                    tanggal == null
+                        ? 'Pilih rentang tanggal'
+                        : '${tanggal!.start.toString().split(' ').first} - ${tanggal!.end.toString().split(' ').first}',
+                  ),
+                  onPressed: () async {
+                    final t = await showDateRangePicker(
+                      context: ctx,
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime.now().add(const Duration(days: 1)),
+                      initialDateRange: tanggal,
+                    );
+                    if (t != null) ubah(() => tanggal = t);
+                  },
+                ),
+                const SizedBox(height: 16),
+                FilledButton(
+                  onPressed: () => Navigator.pop(
+                    ctx,
+                    FilterLaporan(
+                      kategori: kategori,
+                      prioritas: prioritas,
+                      urutan: urutan,
+                      mulai: tanggal?.start,
+                      sampai: tanggal?.end,
+                    ),
+                  ),
+                  child: const Text('Terapkan'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, const FilterLaporan()),
+                  child: const Text('Reset filter'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    if (hasil != null && mounted) setState(() => _pilihan = hasil);
   }
 
   @override
@@ -88,6 +213,15 @@ class _RiwayatPageState extends State<RiwayatPage>
         ),
         backgroundColor: scheme.surface,
         foregroundColor: scheme.onSurface,
+        actions: [
+          IconButton(
+            tooltip: 'Filter laporan',
+            icon: Icon(
+              _pilihan.aktif ? Icons.filter_alt : Icons.filter_alt_outlined,
+            ),
+            onPressed: _aturFilter,
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           labelColor: scheme.primary,
@@ -134,6 +268,25 @@ class _RiwayatPageState extends State<RiwayatPage>
               onChanged: (v) => setState(() => _query = v),
             ),
           ),
+          if (_pilihan.aktif)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Filter tambahan aktif',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () =>
+                        setState(() => _pilihan = const FilterLaporan()),
+                    child: const Text('Reset'),
+                  ),
+                ],
+              ),
+            ),
           Expanded(
             child: TabBarView(
               controller: _tabController,

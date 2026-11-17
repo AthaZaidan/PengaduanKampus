@@ -42,6 +42,7 @@ dependencies:
 
   # Memilih / mengambil foto lampiran laporan (kamera & galeri).
   image_picker: ^1.1.2
+  firebase_messaging: ^17.1.0
 
 dev_dependencies:
   flutter_test:

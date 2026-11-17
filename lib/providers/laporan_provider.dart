@@ -21,6 +21,7 @@ class LaporanProvider extends ChangeNotifier {
   bool menyimpan = false;
   bool dariCache = false;
   String? galat;
+  bool get menggunakanFirebase => _repository != null;
 
   void hubungkan(AppUser user) {
     if (_repository == null) return;
@@ -283,6 +284,39 @@ class LaporanProvider extends ChangeNotifier {
     );
     return true;
   }, fotoSesudah: fotoSesudah);
+
+  Future<bool> konfirmasi(String id, {required String oleh}) => _ubah(id, (l) {
+    if (l.status != StatusLaporan.selesai || l.dikonfirmasi) return false;
+    l.dikonfirmasi = true;
+    _catat(
+      l,
+      StatusLaporan.selesai,
+      oleh: oleh,
+      catatanDefault: 'Pelapor mengonfirmasi hasil perbaikan.',
+    );
+    return true;
+  });
+
+  Future<bool> bukaUlang(
+    String id, {
+    required String oleh,
+    required String alasan,
+  }) => _ubah(id, (l) {
+    if (l.status != StatusLaporan.selesai ||
+        l.dikonfirmasi ||
+        l.teknisiId == null ||
+        alasan.trim().isEmpty) {
+      return false;
+    }
+    _catat(
+      l,
+      StatusLaporan.diproses,
+      oleh: oleh,
+      catatan: alasan,
+      catatanDefault: 'Pelapor meminta pemeriksaan ulang.',
+    );
+    return true;
+  });
 
   /// Kompatibilitas pengujian; aturan server tetap membatasi transisi per peran.
   Future<void> updateStatus(

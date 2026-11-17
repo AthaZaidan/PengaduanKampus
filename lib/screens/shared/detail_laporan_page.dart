@@ -9,6 +9,7 @@ import '../../providers/laporan_provider.dart';
 import '../../widgets/foto_picker_field.dart';
 import '../../widgets/foto_viewer.dart';
 import '../../widgets/foto_storage.dart';
+import '../../widgets/komentar_laporan.dart';
 import '../../services/laporan_repository.dart';
 
 class DetailLaporanPage extends StatefulWidget {
@@ -257,7 +258,16 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
                   style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                 ),
                 const SizedBox(height: 8),
-                FotoPickerField(onChanged: (f) => fotoSesudah = f),
+                if (_laporan.fotoSesudahPaths.length < 3)
+                  FotoPickerField(
+                    maxFoto: (3 - _laporan.fotoSesudahPaths.length).clamp(0, 3),
+                    onChanged: (f) => fotoSesudah = f,
+                  )
+                else
+                  const Text(
+                    'Tiga foto bukti sebelumnya tetap tersimpan. Jelaskan hasil pemeriksaan ulang pada catatan di atas.',
+                    style: TextStyle(fontSize: 12),
+                  ),
               ],
             ),
           ),
@@ -314,6 +324,60 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
       );
     }
 
+    if (_user.uid == l.pelaporId &&
+        l.status == StatusLaporan.selesai &&
+        !l.dikonfirmasi) {
+      hasil.add(
+        isi(
+          'Perbaikan sudah sesuai',
+          Icons.task_alt,
+          StatusLaporan.selesai.color,
+          () async {
+            final ok = await _simpan(
+              () => widget.provider.konfirmasi(l.id, oleh: _user.nama),
+            );
+            if (ok) {
+              _snack(
+                'Hasil perbaikan dikonfirmasi.',
+                StatusLaporan.selesai.color,
+              );
+            }
+          },
+        ),
+      );
+      if (l.teknisiId != null) {
+        hasil.add(
+          garis(
+            'Minta pemeriksaan ulang',
+            Icons.replay,
+            StatusLaporan.diproses.color,
+            () async {
+              final alasan = await _mintaCatatan(
+                judul: 'Pemeriksaan ulang',
+                hint: 'Jelaskan kendala yang masih terjadi',
+                tombol: 'Ajukan',
+                warna: StatusLaporan.diproses.color,
+                wajib: true,
+              );
+              if (alasan == null) return;
+              final ok = await _simpan(
+                () => widget.provider.bukaUlang(
+                  l.id,
+                  oleh: _user.nama,
+                  alasan: alasan,
+                ),
+              );
+              if (ok) {
+                _snack(
+                  'Pemeriksaan ulang diajukan kepada teknisi.',
+                  StatusLaporan.diproses.color,
+                );
+              }
+            },
+          ),
+        );
+      }
+    }
     if (_user.peran.isAdmin) {
       switch (l.status) {
         case StatusLaporan.menunggu:
@@ -663,8 +727,17 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
             const SizedBox(height: 12),
 
             // Tindakan sesuai peran
-            if (!_user.peran.isPelapor)
+            if (!_user.peran.isPelapor || _tombolAksi().isNotEmpty)
               _PanelAksi(peran: _user.peran, tombol: _tombolAksi()),
+            if (_laporan.dikonfirmasi)
+              const Padding(
+                padding: EdgeInsets.all(12),
+                child: Text('Hasil perbaikan telah dikonfirmasi pelapor.'),
+              ),
+            if (widget.provider.menggunakanFirebase) ...[
+              const SizedBox(height: 12),
+              KomentarLaporan(laporanId: _laporan.id, user: _user),
+            ],
             const SizedBox(height: 40),
           ],
         ),

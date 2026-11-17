@@ -18,6 +18,7 @@ function value(v) {
   if (v === null) return { nullValue: null };
   if (typeof v === 'string') return { stringValue: v };
   if (typeof v === 'number') return { integerValue: String(v) };
+  if (typeof v === 'boolean') return { booleanValue: v };
   if (v instanceof Date) return { timestampValue: v.toISOString() };
   if (Array.isArray(v)) return { arrayValue: { values: v.map(value) } };
   return { mapValue: { fields: fields(v) } };
@@ -126,4 +127,35 @@ test('aturan akses dan alur laporan di emulator', { skip: !host || !storage }, a
     await status(await perubahan(palsu, 'utama', 'admin', 'menunggu'), 403);
     await status(await write('laporan/utama', d, 'teknisi', ['updatedAt']), 403);
   });
+  await t.test('draf dan status baca privat per akun', async () => {
+    const draft = { laporanId: 'draf-baru', judul: '', deskripsi: '', lokasi: '', kategori: 'fasilitas', prioritas: 'sedang', fotoPaths: [] };
+    await status(await write('users/pelapor/draf/aktif', draft, 'pelapor', ['updatedAt']), 200);
+    await status(await fetch(url + '/users/pelapor/draf/aktif', { headers: headers('lain') }), 403);
+    await status(await write('users/pelapor/draf/aktif', draft, 'lain', ['updatedAt']), 403);
+    await status(await write('users/pelapor/dibaca/utama_1', {}, 'pelapor', ['waktu']), 200);
+    await status(await write('users/pelapor/dibaca/utama_1', {}, 'lain', ['waktu']), 403);
+    await status(await upload('draf/pelapor/foto', 'pelapor'), 200);
+    await status(await upload('draf/pelapor/foto-lain', 'lain'), 403);
+  });
+  await t.test('lokasi hanya dapat ditambah admin, klarifikasi hanya peserta', async () => {
+    await status(await write('lokasi/a', { nama: 'Gedung A' }, 'admin', ['createdAt']), 200);
+    await status(await write('lokasi/b', { nama: 'Gedung B' }, 'pelapor', ['createdAt']), 403);
+    await status(await write('laporan/utama/komentar/c1', { uid: 'pelapor', nama: 'Pelapor', teks: 'Terima kasih' }, 'pelapor', ['createdAt']), 200);
+    await status(await write('laporan/utama/komentar/c2', { uid: 'lain', nama: 'Lain', teks: 'Tidak boleh' }, 'lain', ['createdAt']), 403);
+    await status(await fetch(url + '/laporan/utama/komentar/c1', { headers: headers('lain') }), 403);
+    await status(await write('users/pelapor/devices/t', { token: 'contoh' }, 'lain', ['updatedAt']), 403);
+    await status(await write('users/pelapor/devices/t', { token: 'contoh' }, 'pelapor', ['updatedAt']), 200);
+  });
+  await t.test('hanya pemilik boleh membuka ulang dan mengonfirmasi hasil', async () => {
+    const palsu = structuredClone(d);
+    await status(await perubahan(palsu, 'utama', 'lain', 'diproses', { catatanAdmin: 'Masih rusak' }), 403);
+    await status(await perubahan(d, 'utama', 'pelapor', 'diproses', { catatanAdmin: 'Masih rusak', dikonfirmasi: false }), 200);
+    await status(await perubahan(d, 'utama', 'teknisi', 'selesai'), 200);
+    const teknisiPalsu = structuredClone(d);
+    await status(await perubahan(teknisiPalsu, 'utama', 'teknisi', 'selesai', { dikonfirmasi: true }), 403);
+    await status(await perubahan(d, 'utama', 'pelapor', 'selesai', { dikonfirmasi: true }), 200);
+    const ulang = structuredClone(d);
+    await status(await perubahan(ulang, 'utama', 'pelapor', 'diproses', { dikonfirmasi: false, catatanAdmin: 'Ulang' }), 403);
+  });
+
 });
