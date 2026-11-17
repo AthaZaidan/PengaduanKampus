@@ -3,6 +3,8 @@ import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
+import '../theme/app_theme.dart';
+
 /// Alur: dilaporkan (menunggu) -> terverifikasi -> ditugaskan -> dikerjakan
 /// (diproses) -> selesai. Laporan yang tidak valid berakhir sebagai ditolak.
 enum StatusLaporan {
@@ -229,19 +231,29 @@ extension StatusLaporanExt on StatusLaporan {
   Color get color {
     switch (this) {
       case StatusLaporan.menunggu:
-        return const Color(0xFF94620E);
+        return AppColors.statusMenunggu;
       case StatusLaporan.diverifikasi:
-        return const Color(0xFF66588A);
+        return AppColors.statusDiverifikasi;
       case StatusLaporan.ditugaskan:
-        return const Color(0xFF267583);
+        return AppColors.statusDitugaskan;
       case StatusLaporan.diproses:
-        return const Color(0xFF315F96);
+        return AppColors.statusDiproses;
       case StatusLaporan.selesai:
-        return const Color(0xFF257054);
+        return AppColors.statusSelesai;
       case StatusLaporan.ditolak:
-        return const Color(0xFFAC3838);
+        return AppColors.statusDitolak;
     }
   }
+
+  /// Warna latar status dari API model main; tidak memengaruhi data Firestore.
+  Color get backgroundColor => switch (this) {
+    StatusLaporan.menunggu => AppColors.statusMenungguBg,
+    StatusLaporan.diverifikasi => AppColors.statusDiverifikasiBg,
+    StatusLaporan.ditugaskan => AppColors.statusDitugaskanBg,
+    StatusLaporan.diproses => AppColors.statusDiprosesBg,
+    StatusLaporan.selesai => AppColors.statusSelesaiBg,
+    StatusLaporan.ditolak => AppColors.statusDitolakBg,
+  };
 
   IconData get icon {
     switch (this) {
@@ -313,14 +325,20 @@ extension PrioritasExt on PrioritasLaporan {
     }
   }
 
+  Color get backgroundColor => switch (this) {
+    PrioritasLaporan.rendah => const Color(0xFFF1F3F5),
+    PrioritasLaporan.sedang => AppColors.statusMenungguBg,
+    PrioritasLaporan.tinggi => AppColors.statusDitolakBg,
+  };
+
   Color get color {
     switch (this) {
       case PrioritasLaporan.rendah:
         return const Color(0xFF6B7280);
       case PrioritasLaporan.sedang:
-        return const Color(0xFF94620E);
+        return AppColors.statusMenunggu;
       case PrioritasLaporan.tinggi:
-        return const Color(0xFFAC3838);
+        return AppColors.statusDitolak;
     }
   }
 }

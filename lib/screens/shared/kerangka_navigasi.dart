@@ -40,17 +40,20 @@ class KerangkaNavigasi extends StatelessWidget {
             ),
           ),
         ),
-        child: NavigationBar(
-          selectedIndex: index,
-          onDestinationSelected: onPilih,
-          destinations: [
-            for (final t in tabs)
-              NavigationDestination(
-                icon: Icon(t.ikon),
-                selectedIcon: Icon(t.ikonAktif),
-                label: t.label,
-              ),
-          ],
+        child: SafeArea(
+          top: false,
+          child: NavigationBar(
+            selectedIndex: index,
+            onDestinationSelected: onPilih,
+            destinations: [
+              for (final t in tabs)
+                NavigationDestination(
+                  icon: Icon(t.ikon),
+                  selectedIcon: Icon(t.ikonAktif),
+                  label: t.label,
+                ),
+            ],
+          ),
         ),
       ),
       floatingActionButton: tombolAksi,

@@ -40,20 +40,26 @@ void main() {
 
     test('menghitung per status, kategori, dan prioritas', () {
       final daftar = [
-        _buat('1',
-            tanggal: sekarang,
-            status: StatusLaporan.selesai,
-            kategori: KategoriKerusakan.internet,
-            prioritas: PrioritasLaporan.tinggi),
-        _buat('2',
-            tanggal: sekarang,
-            kategori: KategoriKerusakan.internet,
-            prioritas: PrioritasLaporan.tinggi),
-        _buat('3',
-            tanggal: sekarang,
-            status: StatusLaporan.diproses,
-            kategori: KategoriKerusakan.listrik,
-            prioritas: PrioritasLaporan.rendah),
+        _buat(
+          '1',
+          tanggal: sekarang,
+          status: StatusLaporan.selesai,
+          kategori: KategoriKerusakan.internet,
+          prioritas: PrioritasLaporan.tinggi,
+        ),
+        _buat(
+          '2',
+          tanggal: sekarang,
+          kategori: KategoriKerusakan.internet,
+          prioritas: PrioritasLaporan.tinggi,
+        ),
+        _buat(
+          '3',
+          tanggal: sekarang,
+          status: StatusLaporan.diproses,
+          kategori: KategoriKerusakan.listrik,
+          prioritas: PrioritasLaporan.rendah,
+        ),
       ];
       final stat = StatistikLaporan.dari(daftar, sekarang: sekarang);
 
@@ -79,7 +85,10 @@ void main() {
           status: StatusLaporan.selesai,
           riwayat: [
             RiwayatStatus(
-                status: StatusLaporan.menunggu, waktu: dibuat, oleh: 'A'),
+              status: StatusLaporan.menunggu,
+              waktu: dibuat,
+              oleh: 'A',
+            ),
             RiwayatStatus(
               status: StatusLaporan.selesai,
               waktu: dibuat.add(const Duration(hours: 2)),
@@ -93,7 +102,10 @@ void main() {
           status: StatusLaporan.selesai,
           riwayat: [
             RiwayatStatus(
-                status: StatusLaporan.menunggu, waktu: dibuat, oleh: 'A'),
+              status: StatusLaporan.menunggu,
+              waktu: dibuat,
+              oleh: 'A',
+            ),
             RiwayatStatus(
               status: StatusLaporan.selesai,
               waktu: dibuat.add(const Duration(hours: 4)),
@@ -131,13 +143,19 @@ void main() {
   group('StatistikLaporan.formatDurasi', () {
     test('berbagai rentang waktu', () {
       expect(StatistikLaporan.formatDurasi(null), '-');
-      expect(StatistikLaporan.formatDurasi(const Duration(seconds: 20)),
-          '< 1 menit');
-      expect(StatistikLaporan.formatDurasi(const Duration(minutes: 45)),
-          '45 menit');
+      expect(
+        StatistikLaporan.formatDurasi(const Duration(seconds: 20)),
+        '< 1 menit',
+      );
+      expect(
+        StatistikLaporan.formatDurasi(const Duration(minutes: 45)),
+        '45 menit',
+      );
       expect(StatistikLaporan.formatDurasi(const Duration(hours: 3)), '3 jam');
-      expect(StatistikLaporan.formatDurasi(const Duration(days: 1, hours: 3)),
-          '1 hari 3 jam');
+      expect(
+        StatistikLaporan.formatDurasi(const Duration(days: 1, hours: 3)),
+        '1 hari 3 jam',
+      );
       expect(StatistikLaporan.formatDurasi(const Duration(days: 2)), '2 hari');
     });
   });
