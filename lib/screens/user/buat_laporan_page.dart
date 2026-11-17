@@ -2,10 +2,12 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+
 import '../../models/app_user.dart';
 import '../../models/laporan.dart';
 import '../../providers/laporan_provider.dart';
 import '../../widgets/foto_viewer.dart';
+import '../../services/laporan_repository.dart';
 
 class BuatLaporanPage extends StatefulWidget {
   final LaporanProvider provider;
@@ -37,6 +39,7 @@ class _BuatLaporanPageState extends State<BuatLaporanPage> {
   KategoriKerusakan _kategori = KategoriKerusakan.fasilitas;
   PrioritasLaporan _prioritas = PrioritasLaporan.sedang;
   bool _isLoading = false;
+  late final String _laporanId = widget.provider.generateId();
 
   @override
   void dispose() {
@@ -101,8 +104,9 @@ class _BuatLaporanPageState extends State<BuatLaporanPage> {
           behavior: SnackBarBehavior.floating,
           backgroundColor: const Color(0xFFEF4444),
           margin: const EdgeInsets.all(16),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           content: const Text(
             'Gagal mengambil foto. Periksa izin kamera/galeri.',
             style: TextStyle(color: Colors.white),
@@ -128,13 +132,12 @@ class _BuatLaporanPageState extends State<BuatLaporanPage> {
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (_isLoading || !_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
-    await Future.delayed(const Duration(milliseconds: 800));
 
     final laporan = Laporan(
-      id: widget.provider.generateId(),
+      id: _laporanId,
       judul: _judulController.text.trim(),
       deskripsi: _deskripsiController.text.trim(),
       lokasi: _lokasiController.text.trim(),
@@ -146,7 +149,15 @@ class _BuatLaporanPageState extends State<BuatLaporanPage> {
       foto: List<Uint8List>.of(_foto),
     );
 
-    widget.provider.tambahLaporan(laporan);
+    try {
+      await widget.provider.tambahLaporan(laporan);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(pesanGalatFirebase(error))));
+      return;
+    }
 
     if (!mounted) return;
     setState(() => _isLoading = false);
@@ -163,7 +174,10 @@ class _BuatLaporanPageState extends State<BuatLaporanPage> {
             SizedBox(width: 10),
             Text(
               'Laporan berhasil dikirim!',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ],
         ),
@@ -177,184 +191,203 @@ class _BuatLaporanPageState extends State<BuatLaporanPage> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF1F5F9),
-      appBar: AppBar(
-        title: const Text(
-          'Buat Laporan',
-          style: TextStyle(fontWeight: FontWeight.bold),
+    return PopScope(
+      canPop: !_isLoading,
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF1F5F9),
+        appBar: AppBar(
+          title: const Text(
+            'Buat Laporan',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          backgroundColor: scheme.primary,
+          foregroundColor: Colors.white,
         ),
-        backgroundColor: scheme.primary,
-        foregroundColor: Colors.white,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Info banner
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: scheme.primary.withValues(alpha: 0.08),
-                  border: Border.all(
-                      color: scheme.primary.withValues(alpha: 0.3)),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.info_outline_rounded,
-                        color: scheme.primary, size: 20),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'Isi form dengan lengkap dan jelas agar laporan dapat segera ditindaklanjuti.',
-                        style: TextStyle(
-                            color: scheme.primary, fontSize: 12),
-                      ),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Info banner
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: scheme.primary.withValues(alpha: 0.08),
+                    border: Border.all(
+                      color: scheme.primary.withValues(alpha: 0.3),
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // Judul
-              _buildSectionLabel('Judul Laporan *'),
-              const SizedBox(height: 6),
-              TextFormField(
-                controller: _judulController,
-                decoration: const InputDecoration(
-                  hintText: 'Contoh: AC Rusak di Ruang 3.2',
-                  filled: true,
-                  fillColor: Colors.white,
-                ),
-                validator: (v) {
-                  if (v == null || v.trim().isEmpty) {
-                    return 'Judul tidak boleh kosong';
-                  }
-                  if (v.trim().length < 5) {
-                    return 'Judul minimal 5 karakter';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-
-              // Kategori
-              _buildSectionLabel('Kategori Kerusakan *'),
-              const SizedBox(height: 6),
-              _KategoriPicker(
-                selected: _kategori,
-                onSelected: (k) => setState(() => _kategori = k),
-              ),
-              const SizedBox(height: 16),
-
-              // Lokasi
-              _buildSectionLabel('Lokasi *'),
-              const SizedBox(height: 6),
-              TextFormField(
-                controller: _lokasiController,
-                decoration: const InputDecoration(
-                  hintText: 'Contoh: Gedung B - Lantai 3, Ruang 3.2',
-                  prefixIcon: Icon(Icons.location_on_outlined),
-                  filled: true,
-                  fillColor: Colors.white,
-                ),
-                validator: (v) {
-                  if (v == null || v.trim().isEmpty) {
-                    return 'Lokasi tidak boleh kosong';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-
-              // Deskripsi
-              _buildSectionLabel('Deskripsi Kerusakan *'),
-              const SizedBox(height: 6),
-              TextFormField(
-                controller: _deskripsiController,
-                maxLines: 5,
-                decoration: const InputDecoration(
-                  hintText:
-                      'Jelaskan kerusakan secara detail: kapan terjadi, kondisi saat ini, dampak yang dirasakan...',
-                  alignLabelWithHint: true,
-                  filled: true,
-                  fillColor: Colors.white,
-                ),
-                validator: (v) {
-                  if (v == null || v.trim().isEmpty) {
-                    return 'Deskripsi tidak boleh kosong';
-                  }
-                  if (v.trim().length < 20) {
-                    return 'Deskripsi minimal 20 karakter';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-
-              // Foto Lampiran
-              _buildSectionLabel('Foto Lampiran (opsional)'),
-              const SizedBox(height: 2),
-              Text(
-                'Tambahkan hingga $_maxFoto foto agar kerusakan lebih jelas.',
-                style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
-              ),
-              const SizedBox(height: 8),
-              _FotoPicker(
-                foto: _foto,
-                maxFoto: _maxFoto,
-                onTambah: _pilihSumberFoto,
-                onHapus: _hapusFoto,
-                onLihat: _lihatFoto,
-              ),
-              const SizedBox(height: 16),
-
-              // Prioritas
-              _buildSectionLabel('Tingkat Prioritas *'),
-              const SizedBox(height: 6),
-              _PrioritasPicker(
-                selected: _prioritas,
-                onSelected: (p) => setState(() => _prioritas = p),
-              ),
-              const SizedBox(height: 28),
-
-              // Submit Button
-              ElevatedButton(
-                onPressed: _isLoading ? null : _submit,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: scheme.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 15),
-                  shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
-                ),
-                child: _isLoading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2.5, color: Colors.white),
-                      )
-                    : const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.send_rounded, size: 18),
-                          SizedBox(width: 8),
-                          Text(
-                            'Kirim Laporan',
-                            style: TextStyle(
-                                fontSize: 15, fontWeight: FontWeight.bold),
-                          ),
-                        ],
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.info_outline_rounded,
+                        color: scheme.primary,
+                        size: 20,
                       ),
-              ),
-              const SizedBox(height: 40),
-            ],
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Isi form dengan lengkap dan jelas agar laporan dapat segera ditindaklanjuti.',
+                          style: TextStyle(color: scheme.primary, fontSize: 12),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // Judul
+                _buildSectionLabel('Judul Laporan *'),
+                const SizedBox(height: 6),
+                TextFormField(
+                  controller: _judulController,
+                  maxLength: 150,
+                  decoration: const InputDecoration(
+                    hintText: 'Contoh: AC Rusak di Ruang 3.2',
+                    filled: true,
+                    fillColor: Colors.white,
+                  ),
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) {
+                      return 'Judul tidak boleh kosong';
+                    }
+                    if (v.trim().length < 5) {
+                      return 'Judul minimal 5 karakter';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // Kategori
+                _buildSectionLabel('Kategori Kerusakan *'),
+                const SizedBox(height: 6),
+                _KategoriPicker(
+                  selected: _kategori,
+                  onSelected: (k) => setState(() => _kategori = k),
+                ),
+                const SizedBox(height: 16),
+
+                // Lokasi
+                _buildSectionLabel('Lokasi *'),
+                const SizedBox(height: 6),
+                TextFormField(
+                  controller: _lokasiController,
+                  maxLength: 200,
+                  decoration: const InputDecoration(
+                    hintText: 'Contoh: Gedung B - Lantai 3, Ruang 3.2',
+                    prefixIcon: Icon(Icons.location_on_outlined),
+                    filled: true,
+                    fillColor: Colors.white,
+                  ),
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) {
+                      return 'Lokasi tidak boleh kosong';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // Deskripsi
+                _buildSectionLabel('Deskripsi Kerusakan *'),
+                const SizedBox(height: 6),
+                TextFormField(
+                  controller: _deskripsiController,
+                  maxLength: 5000,
+                  maxLines: 5,
+                  decoration: const InputDecoration(
+                    hintText: 'Jelaskan kerusakan secara detail: kapan terjadi, kondisi saat ini, dampak yang dirasakan...',
+                    alignLabelWithHint: true,
+                    filled: true,
+                    fillColor: Colors.white,
+                  ),
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) {
+                      return 'Deskripsi tidak boleh kosong';
+                    }
+                    if (v.trim().length < 20) {
+                      return 'Deskripsi minimal 20 karakter';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // Foto Lampiran
+                _buildSectionLabel('Foto Lampiran (opsional)'),
+                const SizedBox(height: 2),
+                Text(
+                  'Tambahkan hingga $_maxFoto foto agar kerusakan lebih jelas.',
+                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                ),
+                const SizedBox(height: 8),
+                _FotoPicker(
+                  foto: _foto,
+                  maxFoto: _maxFoto,
+                  onTambah: _pilihSumberFoto,
+                  onHapus: _hapusFoto,
+                  onLihat: _lihatFoto,
+                ),
+                const SizedBox(height: 16),
+
+                // Prioritas
+                _buildSectionLabel('Tingkat Prioritas *'),
+                const SizedBox(height: 6),
+                _PrioritasPicker(
+                  selected: _prioritas,
+                  onSelected: (p) => setState(() => _prioritas = p),
+                ),
+                const SizedBox(height: 28),
+
+                if (_isLoading)
+                  const Padding(
+                    padding: EdgeInsets.only(bottom: 12),
+                    child: Text(
+                      'Mengunggah foto dan menyimpan laporan ke Firebase?',
+                    ),
+                  ),
+                // Submit Button
+                ElevatedButton(
+                  onPressed: _isLoading ? null : _submit,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: scheme.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.send_rounded, size: 18),
+                            SizedBox(width: 8),
+                            Text(
+                              'Kirim Laporan',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                ),
+                const SizedBox(height: 40),
+              ],
+            ),
           ),
         ),
       ),
@@ -444,14 +477,19 @@ class _FotoPicker extends StatelessWidget {
                 height: _ukuran,
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  border: Border.all(color: scheme.primary.withValues(alpha: 0.4)),
+                  border: Border.all(
+                    color: scheme.primary.withValues(alpha: 0.4),
+                  ),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.add_a_photo_outlined,
-                        color: scheme.primary, size: 26),
+                    Icon(
+                      Icons.add_a_photo_outlined,
+                      color: scheme.primary,
+                      size: 26,
+                    ),
                     const SizedBox(height: 4),
                     Text(
                       '${foto.length}/$maxFoto',
@@ -492,13 +530,9 @@ class _KategoriPicker extends StatelessWidget {
             duration: const Duration(milliseconds: 200),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: isSelected
-                  ? scheme.primary
-                  : Colors.white,
+              color: isSelected ? scheme.primary : Colors.white,
               border: Border.all(
-                color: isSelected
-                    ? scheme.primary
-                    : Colors.grey.shade300,
+                color: isSelected ? scheme.primary : Colors.grey.shade300,
               ),
               borderRadius: BorderRadius.circular(10),
             ),
@@ -563,9 +597,7 @@ class _PrioritasPicker extends StatelessWidget {
                 child: Column(
                   children: [
                     Icon(
-                      isSelected
-                          ? Icons.flag_rounded
-                          : Icons.flag_outlined,
+                      isSelected ? Icons.flag_rounded : Icons.flag_outlined,
                       size: 20,
                       color: isSelected ? p.color : Colors.grey.shade400,
                     ),
@@ -587,4 +619,4 @@ class _PrioritasPicker extends StatelessWidget {
       }).toList(),
     );
   }
-}
+}

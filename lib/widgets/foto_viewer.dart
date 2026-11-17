@@ -2,15 +2,19 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
+import 'foto_storage.dart';
+
 /// Halaman layar penuh untuk melihat foto lampiran (geser & zoom).
 class FotoViewerPage extends StatefulWidget {
   final List<Uint8List> foto;
   final int initialIndex;
+  final List<String> paths;
 
   const FotoViewerPage({
     super.key,
     required this.foto,
     this.initialIndex = 0,
+    this.paths = const [],
   });
 
   @override
@@ -42,19 +46,21 @@ class _FotoViewerPageState extends State<FotoViewerPage> {
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
         title: Text(
-          'Foto ${_index + 1} dari ${widget.foto.length}',
+          'Foto ${_index + 1} dari ${widget.foto.length + widget.paths.length}',
           style: const TextStyle(fontSize: 15),
         ),
       ),
       body: PageView.builder(
         controller: _controller,
-        itemCount: widget.foto.length,
+        itemCount: widget.foto.length + widget.paths.length,
         onPageChanged: (i) => setState(() => _index = i),
         itemBuilder: (context, i) => InteractiveViewer(
           minScale: 1,
           maxScale: 4,
           child: Center(
-            child: Image.memory(widget.foto[i], fit: BoxFit.contain),
+            child: i < widget.foto.length
+                ? Image.memory(widget.foto[i], fit: BoxFit.contain)
+                : FotoStorage(path: widget.paths[i - widget.foto.length]),
           ),
         ),
       ),

@@ -1,0 +1,36 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() { return request.auth != null; }
+    function admin() {
+      return signedIn() && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role
+        in ['admin', 'admin_fasilitas', 'admin fasilitas'];
+    }
+    function laporan(id) {
+      return firestore.get(/databases/(default)/documents/laporan/$(id)).data;
+    }
+    function fotoValid() {
+      return request.resource.size > 0 && request.resource.size <= 5 * 1024 * 1024 &&
+        request.resource.contentType in ['image/jpeg', 'image/png', 'image/webp'];
+    }
+    match /laporan/{owner}/{id}/{jenis}/{uploader}/{file} {
+      allow read: if signedIn() && (admin() || laporan(id).pelaporId == request.auth.uid ||
+        (laporan(id).teknisiId == request.auth.uid &&
+          firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'teknisi'));
+      allow create: if signedIn() && uploader == request.auth.uid && fotoValid() && (
+        (jenis == 'sebelum' && owner == request.auth.uid &&
+          !firestore.exists(/databases/(default)/documents/laporan/$(id))) ||
+        (jenis == 'sesudah' && laporan(id).pelaporId == owner &&
+          laporan(id).teknisiId == request.auth.uid && laporan(id).status == 'diproses' &&
+          firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'teknisi')
+      );
+      allow update: if false;
+      // Hanya berkas upload yang tidak direferensikan laporan boleh dibersihkan.
+      allow delete: if signedIn() && uploader == request.auth.uid && (
+        !firestore.exists(/databases/(default)/documents/laporan/$(id)) ||
+        (!(('laporan/' + owner + '/' + id + '/' + jenis + '/' + uploader + '/' + file) in laporan(id).fotoPaths) &&
+          !(('laporan/' + owner + '/' + id + '/' + jenis + '/' + uploader + '/' + file) in laporan(id).fotoSesudahPaths))
+      );
+    }
+  }
+}

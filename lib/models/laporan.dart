@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 /// Alur: dilaporkan (menunggu) -> terverifikasi -> ditugaskan -> dikerjakan
@@ -18,12 +19,14 @@ class RiwayatStatus {
   final StatusLaporan status;
   final DateTime waktu;
   final String oleh;
+  final String? olehId;
   final String? catatan;
 
   const RiwayatStatus({
     required this.status,
     required this.waktu,
     required this.oleh,
+    this.olehId,
     this.catatan,
   });
 }
@@ -53,6 +56,11 @@ class Laporan {
   /// Foto SESUDAH penanganan (diunggah teknisi saat menyelesaikan).
   final List<Uint8List> fotoSesudah;
 
+  /// Path privat di Storage; gambar tidak dimasukkan ke dokumen Firestore.
+  final List<String> fotoPaths;
+  final List<String> fotoSesudahPaths;
+  final int revisi;
+
   /// Timeline perubahan status, urut dari yang paling lama ke terbaru.
   final List<RiwayatStatus> riwayat;
 
@@ -72,18 +80,89 @@ class Laporan {
     this.teknisiNama,
     List<Uint8List>? foto,
     List<Uint8List>? fotoSesudah,
+    List<String>? fotoPaths,
+    List<String>? fotoSesudahPaths,
+    this.revisi = 0,
     List<RiwayatStatus>? riwayat,
-  })  : foto = foto ?? const [],
-        fotoSesudah = fotoSesudah ?? <Uint8List>[],
-        riwayat = riwayat ??
-            [
-              RiwayatStatus(
-                status: status,
-                waktu: tanggalLapor,
-                oleh: pelapor,
-                catatan: 'Laporan dibuat',
-              ),
-            ];
+  }) : foto = foto ?? const [],
+       fotoPaths = fotoPaths ?? <String>[],
+       fotoSesudahPaths = fotoSesudahPaths ?? <String>[],
+       fotoSesudah = fotoSesudah ?? <Uint8List>[],
+       riwayat =
+           riwayat ??
+           [
+             RiwayatStatus(
+               status: status,
+               waktu: tanggalLapor,
+               oleh: pelapor,
+               catatan: 'Laporan dibuat',
+             ),
+           ];
+
+  int get jumlahFoto => foto.length + fotoPaths.length;
+  int get jumlahFotoSesudah => fotoSesudah.length + fotoSesudahPaths.length;
+
+  Map<String, dynamic> toFirestore() => {
+    'judul': judul,
+    'deskripsi': deskripsi,
+    'lokasi': lokasi,
+    'kategori': kategori.name,
+    'prioritas': prioritas.name,
+    'pelapor': pelapor,
+    'pelaporId': pelaporId,
+    'tanggalLapor': Timestamp.fromDate(tanggalLapor),
+    'status': status.name,
+    'catatanAdmin': catatanAdmin,
+    'teknisiId': teknisiId,
+    'teknisiNama': teknisiNama,
+    'fotoPaths': fotoPaths,
+    'fotoSesudahPaths': fotoSesudahPaths,
+    'revisi': revisi,
+    'riwayat': riwayat
+        .map(
+          (r) => {
+            'status': r.status.name,
+            'waktu': Timestamp.fromDate(r.waktu),
+            'oleh': r.oleh,
+            'olehId': r.olehId,
+            'catatan': r.catatan,
+          },
+        )
+        .toList(),
+  };
+
+  factory Laporan.fromFirestore(String id, Map<String, dynamic> data) {
+    return Laporan(
+      id: id,
+      judul: data['judul'] as String,
+      deskripsi: data['deskripsi'] as String,
+      lokasi: data['lokasi'] as String,
+      kategori: KategoriKerusakan.values.byName(data['kategori'] as String),
+      prioritas: PrioritasLaporan.values.byName(data['prioritas'] as String),
+      pelapor: data['pelapor'] as String,
+      pelaporId: data['pelaporId'] as String?,
+      tanggalLapor: (data['tanggalLapor'] as Timestamp).toDate(),
+      status: StatusLaporan.values.byName(data['status'] as String),
+      catatanAdmin: data['catatanAdmin'] as String?,
+      teknisiId: data['teknisiId'] as String?,
+      teknisiNama: data['teknisiNama'] as String?,
+      fotoPaths: List<String>.from(data['fotoPaths'] as List? ?? []),
+      fotoSesudahPaths: List<String>.from(
+        data['fotoSesudahPaths'] as List? ?? [],
+      ),
+      revisi: data['revisi'] as int? ?? 0,
+      riwayat: (data['riwayat'] as List).map((item) {
+        final r = Map<String, dynamic>.from(item as Map);
+        return RiwayatStatus(
+          status: StatusLaporan.values.byName(r['status'] as String),
+          waktu: (r['waktu'] as Timestamp).toDate(),
+          oleh: r['oleh'] as String,
+          olehId: r['olehId'] as String?,
+          catatan: r['catatan'] as String?,
+        );
+      }).toList(),
+    );
+  }
 
   /// Batas waktu penyelesaian (SLA) berdasarkan prioritas.
   DateTime get batasSla => tanggalLapor.add(prioritas.targetSla);

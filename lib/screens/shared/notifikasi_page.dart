@@ -74,7 +74,7 @@ class NotifikasiPage extends StatelessWidget {
           : ListView.separated(
               padding: const EdgeInsets.all(16),
               itemCount: daftar.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              separatorBuilder: (_, _) => const SizedBox(height: 10),
               itemBuilder: (context, i) => _NotifTile(
                 notif: daftar[i],
                 onTap: () => Navigator.of(context).push(

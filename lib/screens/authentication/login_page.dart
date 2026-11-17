@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+
 import '../main_shell.dart';
 import '../../providers/laporan_provider.dart';
 import 'register_page.dart';
@@ -15,7 +16,7 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
-  final _identifierController = TextEditingController(); 
+  final _identifierController = TextEditingController();
   final _passwordController = TextEditingController();
 
   bool _isPasswordHidden = true;
@@ -43,20 +44,8 @@ class _LoginPageState extends State<LoginPage> {
       bool isNim = RegExp(r'^[0-9]{9}$').hasMatch(input);
 
       if (isNim) {
-        // Cari email terdaftar berdasarkan NIM di Firestore
-        final querySnapshot = await FirebaseFirestore.instance
-            .collection('users')
-            .where('nim', isEqualTo: input)
-            .limit(1)
-            .get();
-
-        if (querySnapshot.docs.isEmpty) {
-          // Jika tidak ada di Firestore, coba fallback dengan domain email kampus
-          emailToAuth = '$input@students.usu.ac.id';
-        } else {
-          // Gunakan email yang tersimpan di data user Firestore
-          emailToAuth = querySnapshot.docs.first.data()['email'] ?? '';
-        }
+        // NIM memakai alamat kampus; profil tidak dibuka sebelum autentikasi.
+        emailToAuth = '$input@students.usu.ac.id';
       }
 
       // Autentikasi ke Firebase Auth
@@ -116,8 +105,8 @@ class _LoginPageState extends State<LoginPage> {
         idToken: googleAuth.idToken,
       );
 
-      UserCredential userCredential =
-          await FirebaseAuth.instance.signInWithCredential(credential);
+      UserCredential userCredential = await FirebaseAuth.instance
+          .signInWithCredential(credential);
       User? user = userCredential.user;
 
       if (user != null) {
@@ -128,15 +117,18 @@ class _LoginPageState extends State<LoginPage> {
             .get();
 
         if (!userDoc.exists) {
-          await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-            'uid': user.uid,
-            'name': user.displayName ?? '',
-            'email': user.email ?? '',
-            'nim': '-',
-            'phone': '-',
-            'role': 'student',
-            'createdAt': FieldValue.serverTimestamp(),
-          });
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .set({
+                'uid': user.uid,
+                'name': user.displayName ?? '',
+                'email': user.email ?? '',
+                'nim': '-',
+                'phone': '-',
+                'role': 'student',
+                'createdAt': FieldValue.serverTimestamp(),
+              });
         }
       }
 
@@ -182,7 +174,11 @@ class _LoginPageState extends State<LoginPage> {
                 CircleAvatar(
                   radius: 40,
                   backgroundColor: scheme.primary.withValues(alpha: 0.1),
-                  child: Icon(Icons.campaign_rounded, size: 40, color: scheme.primary),
+                  child: Icon(
+                    Icons.campaign_rounded,
+                    size: 40,
+                    color: scheme.primary,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 Text(
@@ -218,9 +214,13 @@ class _LoginPageState extends State<LoginPage> {
                   controller: _identifierController,
                   decoration: InputDecoration(
                     labelText: 'NIM / Email',
+                    helperText: 'NIM untuk email students.usu.ac.id. Email lain: gunakan alamat lengkap.',
+                    helperMaxLines: 2,
                     hintText: 'Masukkan NIM (241402101) atau Email',
                     prefixIcon: const Icon(Icons.badge_outlined),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   validator: (v) {
                     if (v == null || v.trim().isEmpty) {
@@ -238,15 +238,18 @@ class _LoginPageState extends State<LoginPage> {
                   decoration: InputDecoration(
                     labelText: 'Password',
                     prefixIcon: const Icon(Icons.lock_outline),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     suffixIcon: IconButton(
                       icon: Icon(
                         _isPasswordHidden
                             ? Icons.visibility_off_outlined
                             : Icons.visibility_outlined,
                       ),
-                      onPressed: () =>
-                          setState(() => _isPasswordHidden = !_isPasswordHidden),
+                      onPressed: () => setState(
+                        () => _isPasswordHidden = !_isPasswordHidden,
+                      ),
                     ),
                   ),
                   validator: (v) {
@@ -278,7 +281,10 @@ class _LoginPageState extends State<LoginPage> {
                         )
                       : const Text(
                           'Masuk',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                 ),
                 const SizedBox(height: 20),
@@ -289,7 +295,10 @@ class _LoginPageState extends State<LoginPage> {
                     Expanded(child: Divider(color: Colors.grey.shade300)),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: Text('atau', style: TextStyle(color: Colors.grey.shade600)),
+                      child: Text(
+                        'atau',
+                        style: TextStyle(color: Colors.grey.shade600),
+                      ),
                     ),
                     Expanded(child: Divider(color: Colors.grey.shade300)),
                   ],
@@ -307,7 +316,10 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   label: const Text(
                     'Masuk dengan Google',
-                    style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      color: Colors.black87,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 14),
@@ -349,4 +361,4 @@ class _LoginPageState extends State<LoginPage> {
       ),
     );
   }
-}
+}

@@ -20,28 +20,28 @@ Laporan _laporanBaru(String id, {List<Uint8List>? foto}) {
 
 void main() {
   group('LaporanProvider', () {
-    test('tambahLaporan memberi tahu listener (dasar refresh UI)', () {
+    test('tambahLaporan memberi tahu listener (dasar refresh UI)', () async {
       final provider = LaporanProvider();
       var dipanggil = 0;
       provider.addListener(() => dipanggil++);
 
       final jumlahAwal = provider.laporanList.length;
-      provider.tambahLaporan(_laporanBaru(provider.generateId()));
+      await provider.tambahLaporan(_laporanBaru(provider.generateId()));
 
       expect(dipanggil, 1);
       expect(provider.laporanList.length, jumlahAwal + 1);
       expect(provider.laporanList.first.judul, 'Lampu Koridor Mati');
     });
 
-    test('updateStatus memberi tahu listener dan menambah timeline', () {
+    test('updateStatus memberi tahu listener dan menambah timeline', () async {
       final provider = LaporanProvider();
       final laporan = _laporanBaru(provider.generateId());
-      provider.tambahLaporan(laporan);
+      await provider.tambahLaporan(laporan);
 
       var dipanggil = 0;
       provider.addListener(() => dipanggil++);
 
-      provider.updateStatus(
+      await provider.updateStatus(
         laporan.id,
         StatusLaporan.diproses,
         catatan: '  Teknisi menuju lokasi  ',
@@ -56,30 +56,37 @@ void main() {
       expect(laporan.riwayat.last.catatan, 'Teknisi menuju lokasi');
     });
 
-    test('catatan kosong tidak menimpa catatan sebelumnya', () {
+    test('catatan kosong tidak menimpa catatan sebelumnya', () async {
       final provider = LaporanProvider();
       final laporan = _laporanBaru(provider.generateId());
-      provider.tambahLaporan(laporan);
+      await provider.tambahLaporan(laporan);
 
-      provider.updateStatus(laporan.id, StatusLaporan.diproses,
-          catatan: 'Sedang dicek');
-      provider.updateStatus(laporan.id, StatusLaporan.selesai, catatan: '   ');
+      await provider.updateStatus(
+        laporan.id,
+        StatusLaporan.diproses,
+        catatan: 'Sedang dicek',
+      );
+      await provider.updateStatus(
+        laporan.id,
+        StatusLaporan.selesai,
+        catatan: '   ',
+      );
 
       expect(laporan.catatanAdmin, 'Sedang dicek');
       expect(laporan.riwayat.last.status, StatusLaporan.selesai);
       expect(laporan.riwayat.last.catatan, isNull);
     });
 
-    test('status yang sama atau id tidak dikenal diabaikan', () {
+    test('status yang sama atau id tidak dikenal diabaikan', () async {
       final provider = LaporanProvider();
       final laporan = _laporanBaru(provider.generateId());
-      provider.tambahLaporan(laporan);
+      await provider.tambahLaporan(laporan);
 
       var dipanggil = 0;
       provider.addListener(() => dipanggil++);
 
-      provider.updateStatus(laporan.id, StatusLaporan.menunggu);
-      provider.updateStatus('RPT-XXX', StatusLaporan.selesai);
+      await provider.updateStatus(laporan.id, StatusLaporan.menunggu);
+      await provider.updateStatus('RPT-XXX', StatusLaporan.selesai);
 
       expect(dipanggil, 0);
       expect(laporan.riwayat.length, 1);
@@ -87,7 +94,7 @@ void main() {
   });
 
   group('Laporan', () {
-    test('laporan baru otomatis punya entri awal di timeline', () {
+    test('laporan baru otomatis punya entri awal di timeline', () async {
       final laporan = _laporanBaru('RPT-100');
 
       expect(laporan.riwayat.length, 1);
@@ -96,7 +103,7 @@ void main() {
       expect(laporan.foto, isEmpty);
     });
 
-    test('foto lampiran tersimpan di laporan', () {
+    test('foto lampiran tersimpan di laporan', () async {
       final foto = [
         Uint8List.fromList([1, 2, 3]),
         Uint8List.fromList([4, 5, 6]),

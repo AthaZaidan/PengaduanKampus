@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+
 import '../../models/app_user.dart';
 import '../../models/laporan.dart';
 import '../../providers/laporan_provider.dart';
@@ -14,17 +15,14 @@ class ProfilePage extends StatefulWidget {
   /// Pengguna yang sedang login (peran dibaca dari Firestore).
   final AppUser user;
 
-  const ProfilePage({
-    super.key,
-    required this.provider,
-    required this.user,
-  });
+  const ProfilePage({super.key, required this.provider, required this.user});
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
 }
 
 class _ProfilePageState extends State<ProfilePage> {
+  bool _menyimpanProfil = false;
   static const _bulan = [
     'Januari',
     'Februari',
@@ -46,8 +44,9 @@ class _ProfilePageState extends State<ProfilePage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         behavior: SnackBarBehavior.floating,
-        backgroundColor:
-            error ? const Color(0xFFEF4444) : const Color(0xFF10B981),
+        backgroundColor: error
+            ? const Color(0xFFEF4444)
+            : const Color(0xFF10B981),
         margin: const EdgeInsets.all(16),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         content: Text(pesan, style: const TextStyle(color: Colors.white)),
@@ -56,8 +55,11 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   static String _inisial(String nama) {
-    final kata =
-        nama.trim().split(RegExp(r'\s+')).where((k) => k.isNotEmpty).toList();
+    final kata = nama
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((k) => k.isNotEmpty)
+        .toList();
     if (kata.isEmpty) return 'M';
     if (kata.length == 1) return kata.first[0].toUpperCase();
     return (kata.first[0] + kata[1][0]).toUpperCase();
@@ -80,6 +82,10 @@ class _ProfilePageState extends State<ProfilePage> {
   // ---------------------------------------------------------------- actions
 
   Future<void> _logout() async {
+    if (_menyimpanProfil || widget.provider.menyimpan) {
+      _snack('Tunggu penyimpanan selesai sebelum keluar.', error: true);
+      return;
+    }
     final yakin = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -92,9 +98,7 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(
-              backgroundColor: Colors.red.shade600,
-            ),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red.shade600),
             child: const Text('Keluar'),
           ),
         ],
@@ -117,6 +121,7 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _ubahNama(User user, String namaSekarang) async {
+    if (_menyimpanProfil) return;
     final controller = TextEditingController(text: namaSekarang);
     final nama = await showDialog<String>(
       context: context,
@@ -142,30 +147,46 @@ class _ProfilePageState extends State<ProfilePage> {
     );
     if (nama == null || nama.isEmpty || nama == namaSekarang) return;
 
+    setState(() => _menyimpanProfil = true);
     try {
-      await user.updateDisplayName(nama);
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .set({'name': nama}, SetOptions(merge: true));
-      await user.reload();
+      final db = FirebaseFirestore.instance;
+      await db.runTransaction((tx) async {
+        final ref = db.collection('users').doc(user.uid);
+        final doc = await tx.get(ref);
+        if (!doc.exists) throw StateError('Profil belum tersedia.');
+        tx.update(ref, {'name': nama});
+      });
+      try {
+        await user.updateDisplayName(nama);
+        await user.reload();
+      } catch (_) {
+        // Firestore adalah sumber profil utama; nama Auth dapat diselaraskan kemudian.
+      }
       if (!mounted) return;
       setState(() {});
       _snack('Nama berhasil diperbarui');
     } catch (_) {
       if (!mounted) return;
-      _snack('Gagal memperbarui nama. Coba lagi.', error: true);
+      _snack(
+        'Nama belum tersimpan. Periksa koneksi dan coba lagi.',
+        error: true,
+      );
+    } finally {
+      if (mounted) setState(() => _menyimpanProfil = false);
     }
   }
 
   Future<void> _ubahPassword(User user) async {
-    final pakaiPassword =
-        user.providerData.any((p) => p.providerId == 'password');
+    final pakaiPassword = user.providerData.any(
+      (p) => p.providerId == 'password',
+    );
     final email = user.email;
 
     if (!pakaiPassword) {
-      _snack('Akun ini masuk dengan Google, jadi tidak memiliki password.',
-          error: true);
+      _snack(
+        'Akun ini masuk dengan Google, jadi tidak memiliki password.',
+        error: true,
+      );
       return;
     }
     if (email == null || email.isEmpty) {
@@ -213,6 +234,12 @@ class _ProfilePageState extends State<ProfilePage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF1F5F9),
       appBar: AppBar(
+        bottom: _menyimpanProfil
+            ? const PreferredSize(
+                preferredSize: Size.fromHeight(4),
+                child: LinearProgressIndicator(),
+              )
+            : null,
         title: const Text(
           'Profil Saya',
           style: TextStyle(fontWeight: FontWeight.bold),
@@ -249,8 +276,9 @@ class _ProfilePageState extends State<ProfilePage> {
     final nim = _ambil(data, 'nim');
     final telepon = _ambil(data, 'phone');
     final peran = widget.user.peran;
-    final lewatGoogle =
-        user.providerData.any((p) => p.providerId == 'google.com');
+    final lewatGoogle = user.providerData.any(
+      (p) => p.providerId == 'google.com',
+    );
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -266,7 +294,9 @@ class _ProfilePageState extends State<ProfilePage> {
               colors: [
                 scheme.primary,
                 Color.alphaBlend(
-                    Colors.black.withValues(alpha: 0.3), scheme.primary),
+                  Colors.black.withValues(alpha: 0.3),
+                  scheme.primary,
+                ),
               ],
             ),
           ),
@@ -314,8 +344,10 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
               const SizedBox(height: 10),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(20),
@@ -383,11 +415,7 @@ class _ProfilePageState extends State<ProfilePage> {
           ikon: Icons.badge_outlined,
           child: Column(
             children: [
-              _BarisInfo(
-                ikon: peran.icon,
-                label: 'Peran',
-                nilai: peran.label,
-              ),
+              _BarisInfo(ikon: peran.icon, label: 'Peran', nilai: peran.label),
               _BarisInfo(
                 ikon: Icons.numbers_rounded,
                 label: 'NIM / ID',
