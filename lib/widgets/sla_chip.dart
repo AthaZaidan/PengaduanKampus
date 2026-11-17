@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../models/laporan.dart';
 import '../models/statistik_laporan.dart';
 
@@ -21,19 +22,19 @@ class SlaChip extends StatelessWidget {
       final sisa = laporan.batasSla.difference(DateTime.now());
       if (sisa.isNegative) {
         teks = 'Lewat SLA ${StatistikLaporan.formatDurasi(-sisa)}';
-        warna = const Color(0xFFEF4444);
+        warna = const Color(0xFFAC3838);
       } else {
         teks = 'Sisa ${StatistikLaporan.formatDurasi(sisa)}';
         warna = sisa < const Duration(hours: 6)
-            ? const Color(0xFFF59E0B)
-            : const Color(0xFF10B981);
+            ? const Color(0xFF94620E)
+            : const Color(0xFF257054);
       }
     } else if (laporan.melewatiSla) {
       teks = 'Selesai lewat SLA';
-      warna = const Color(0xFFEF4444);
+      warna = const Color(0xFFAC3838);
     } else {
       teks = 'Selesai sesuai SLA';
-      warna = const Color(0xFF10B981);
+      warna = const Color(0xFF257054);
     }
 
     return Container(

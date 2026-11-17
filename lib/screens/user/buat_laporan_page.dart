@@ -102,7 +102,7 @@ class _BuatLaporanPageState extends State<BuatLaporanPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           behavior: SnackBarBehavior.floating,
-          backgroundColor: const Color(0xFFEF4444),
+          backgroundColor: const Color(0xFFAC3838),
           margin: const EdgeInsets.all(16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -165,12 +165,12 @@ class _BuatLaporanPageState extends State<BuatLaporanPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         behavior: SnackBarBehavior.floating,
-        backgroundColor: const Color(0xFF10B981),
+        backgroundColor: const Color(0xFF257054),
         margin: const EdgeInsets.all(16),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         content: Row(
           children: const [
-            Icon(Icons.check_circle_rounded, color: Colors.white),
+            Icon(Icons.check_circle_outline, color: Colors.white),
             SizedBox(width: 10),
             Text(
               'Laporan berhasil dikirim!',
@@ -194,14 +194,14 @@ class _BuatLaporanPageState extends State<BuatLaporanPage> {
     return PopScope(
       canPop: !_isLoading,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF1F5F9),
+        backgroundColor: const Color(0xFFF5F7FA),
         appBar: AppBar(
           title: const Text(
             'Buat Laporan',
             style: TextStyle(fontWeight: FontWeight.bold),
           ),
-          backgroundColor: scheme.primary,
-          foregroundColor: Colors.white,
+          backgroundColor: scheme.surface,
+          foregroundColor: scheme.onSurface,
         ),
         body: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
@@ -222,11 +222,7 @@ class _BuatLaporanPageState extends State<BuatLaporanPage> {
                   ),
                   child: Row(
                     children: [
-                      Icon(
-                        Icons.info_outline_rounded,
-                        color: scheme.primary,
-                        size: 20,
-                      ),
+                      Icon(Icons.info_outline, color: scheme.primary, size: 20),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
@@ -373,13 +369,15 @@ class _BuatLaporanPageState extends State<BuatLaporanPage> {
                       : const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.send_rounded, size: 18),
+                            Icon(Icons.send_outlined, size: 18),
                             SizedBox(width: 8),
-                            Text(
-                              'Kirim Laporan',
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
+                            Flexible(
+                              child: Text(
+                                'Kirim Laporan',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                           ],
@@ -458,7 +456,7 @@ class _FotoPicker extends StatelessWidget {
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
-                          Icons.close_rounded,
+                          Icons.close,
                           size: 14,
                           color: Colors.white,
                         ),
@@ -545,12 +543,14 @@ class _KategoriPicker extends StatelessWidget {
                   color: isSelected ? Colors.white : Colors.grey.shade600,
                 ),
                 const SizedBox(width: 6),
-                Text(
-                  k.label,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: isSelected ? Colors.white : Colors.grey.shade700,
+                Flexible(
+                  child: Text(
+                    k.label,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: isSelected ? Colors.white : Colors.grey.shade700,
+                    ),
                   ),
                 ),
               ],
@@ -597,7 +597,7 @@ class _PrioritasPicker extends StatelessWidget {
                 child: Column(
                   children: [
                     Icon(
-                      isSelected ? Icons.flag_rounded : Icons.flag_outlined,
+                      isSelected ? Icons.flag_outlined : Icons.flag_outlined,
                       size: 20,
                       color: isSelected ? p.color : Colors.grey.shade400,
                     ),

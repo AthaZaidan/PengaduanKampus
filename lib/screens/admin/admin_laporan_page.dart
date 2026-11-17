@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../models/app_user.dart';
 import '../../models/laporan.dart';
 import '../../providers/laporan_provider.dart';
@@ -9,7 +10,11 @@ class AdminLaporanPage extends StatelessWidget {
   final LaporanProvider provider;
   final AppUser user;
 
-  const AdminLaporanPage({super.key, required this.provider, required this.user});
+  const AdminLaporanPage({
+    super.key,
+    required this.provider,
+    required this.user,
+  });
 
   @override
   Widget build(BuildContext context) {

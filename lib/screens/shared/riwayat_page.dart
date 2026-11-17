@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/app_user.dart';
 import '../../models/laporan.dart';
 import '../../providers/laporan_provider.dart';
-import '../../widgets/sla_chip.dart';
+import '../../widgets/komponen_kampus.dart';
 import 'detail_laporan_page.dart';
 
 /// Satu tab pada daftar laporan. [status] null berarti semua status.
@@ -80,19 +80,19 @@ class _RiwayatPageState extends State<RiwayatPage>
     final sumber = widget.provider.untuk(widget.user);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF1F5F9),
+      backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
         title: Text(
           widget.judul,
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
-        backgroundColor: scheme.primary,
-        foregroundColor: Colors.white,
+        backgroundColor: scheme.surface,
+        foregroundColor: scheme.onSurface,
         bottom: TabBar(
           controller: _tabController,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white60,
-          indicatorColor: Colors.white,
+          labelColor: scheme.primary,
+          unselectedLabelColor: scheme.onSurfaceVariant,
+          indicatorColor: scheme.primary,
           isScrollable: true,
           tabAlignment: TabAlignment.start,
           tabs: [
@@ -108,12 +108,12 @@ class _RiwayatPageState extends State<RiwayatPage>
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Cari laporan...',
+                hintText: 'Cari judul, lokasi, atau nomor',
                 hintStyle: TextStyle(color: Colors.grey.shade400),
-                prefixIcon: const Icon(Icons.search_rounded),
+                prefixIcon: const Icon(Icons.search),
                 suffixIcon: _query.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(Icons.close_rounded),
+                        icon: const Icon(Icons.close),
                         onPressed: () {
                           _searchController.clear();
                           setState(() => _query = '');
@@ -153,6 +153,7 @@ class _RiwayatPageState extends State<RiwayatPage>
   }
 
   Tab _buildTab(String label, int count, [Color? color]) {
+    final scheme = Theme.of(context).colorScheme;
     return Tab(
       child: Row(
         children: [
@@ -163,7 +164,7 @@ class _RiwayatPageState extends State<RiwayatPage>
             decoration: BoxDecoration(
               color: color != null
                   ? color.withValues(alpha: 0.25)
-                  : Colors.white24,
+                  : scheme.primary.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Text(
@@ -171,7 +172,7 @@ class _RiwayatPageState extends State<RiwayatPage>
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
-                color: color ?? Colors.white,
+                color: color ?? scheme.primary,
               ),
             ),
           ),
@@ -195,21 +196,13 @@ class _LaporanList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (list.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.folder_open_outlined,
-              size: 64,
-              color: Colors.grey.shade300,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Tidak ada laporan',
-              style: TextStyle(color: Colors.grey.shade500, fontSize: 14),
-            ),
-          ],
+      return const Center(
+        child: SingleChildScrollView(
+          child: KeadaanKosong(
+            judul: 'Tidak ada laporan',
+            keterangan: 'Belum ada laporan pada daftar ini. Coba tab lain atau sesuaikan pencarian.',
+            ikon: Icons.folder_open_outlined,
+          ),
         ),
       );
     }
@@ -219,7 +212,7 @@ class _LaporanList extends StatelessWidget {
       itemCount: list.length,
       itemBuilder: (context, index) {
         final laporan = list[index];
-        return _RiwayatCard(
+        return KartuLaporan(
           laporan: laporan,
           tampilkanInternal: !user.peran.isPelapor,
           onTap: () => Navigator.of(context).push(
@@ -233,223 +226,6 @@ class _LaporanList extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-}
-
-class _RiwayatCard extends StatelessWidget {
-  final Laporan laporan;
-  final VoidCallback onTap;
-
-  /// Admin / teknisi: tampilkan teknisi dan SLA.
-  final bool tampilkanInternal;
-
-  const _RiwayatCard({
-    required this.laporan,
-    required this.onTap,
-    this.tampilkanInternal = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 10),
-      elevation: 1.5,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: scheme.primary.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  laporan.kategori.icon,
-                  size: 22,
-                  color: scheme.primary,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      laporan.judul,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.location_on_outlined,
-                          size: 12,
-                          color: Colors.grey.shade500,
-                        ),
-                        const SizedBox(width: 2),
-                        Expanded(
-                          child: Text(
-                            laporan.lokasi,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.grey.shade500,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Text(
-                          laporan.id,
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.grey.shade400,
-                            fontFamily: 'monospace',
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          width: 3,
-                          height: 3,
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade400,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 1,
-                          ),
-                          decoration: BoxDecoration(
-                            color: laporan.prioritas.color.withValues(
-                              alpha: 0.15,
-                            ),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            laporan.prioritas.label,
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              color: laporan.prioritas.color,
-                            ),
-                          ),
-                        ),
-                        if (laporan.jumlahFoto > 0) ...[
-                          const SizedBox(width: 8),
-                          Icon(
-                            Icons.photo_camera_outlined,
-                            size: 12,
-                            color: Colors.grey.shade500,
-                          ),
-                          const SizedBox(width: 2),
-                          Text(
-                            '${laporan.jumlahFoto}',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.grey.shade500,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                    if (tampilkanInternal) ...[
-                      const SizedBox(height: 6),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 4,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          if (laporan.teknisiNama != null)
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.engineering_outlined,
-                                  size: 12,
-                                  color: Colors.grey.shade500,
-                                ),
-                                const SizedBox(width: 3),
-                                Text(
-                                  laporan.teknisiNama!,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.grey.shade600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          SlaChip(laporan: laporan),
-                        ],
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: laporan.status.color.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          laporan.status.icon,
-                          size: 11,
-                          color: laporan.status.color,
-                        ),
-                        const SizedBox(width: 3),
-                        Text(
-                          laporan.status.label,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: laporan.status.color,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  const Icon(
-                    Icons.chevron_right_rounded,
-                    color: Colors.grey,
-                    size: 18,
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+
 import '../../models/app_user.dart';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -12,7 +14,7 @@ class RegisterPage extends StatefulWidget {
 
 class _RegisterPageState extends State<RegisterPage> {
   final _formKey = GlobalKey<FormState>();
-  
+
   // Controller Input Field
   final _namaController = TextEditingController();
   final _nimController = TextEditingController();
@@ -49,11 +51,8 @@ class _RegisterPageState extends State<RegisterPage> {
       final phone = _phoneController.text.trim();
 
       // 1. Buat Akun di Firebase Auth menggunakan Email & Password
-      UserCredential userCredential =
-          await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
+      UserCredential userCredential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(email: email, password: password);
 
       final uid = userCredential.user?.uid;
 
@@ -81,7 +80,7 @@ class _RegisterPageState extends State<RegisterPage> {
           behavior: SnackBarBehavior.floating,
         ),
       );
-      
+
       // Kembali ke Halaman Login
       Navigator.pop(context);
     } on FirebaseAuthException catch (e) {
@@ -121,9 +120,7 @@ class _RegisterPageState extends State<RegisterPage> {
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Registrasi Akun Baru'),
-      ),
+      appBar: AppBar(title: const Text('Pendaftaran akun')),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -133,15 +130,12 @@ class _RegisterPageState extends State<RegisterPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const Text(
-                  'Buat Akun Mahasiswa',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  'Daftar akun pelapor',
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Lengkapi seluruh data diri Anda di bawah ini.',
+                  'Lengkapi identitas Anda untuk menggunakan layanan pengaduan kampus.',
                   style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
                 ),
                 const SizedBox(height: 24),
@@ -189,8 +183,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       ),
                     ],
                     selected: {_peran},
-                    onSelectionChanged: (v) =>
-                        setState(() => _peran = v.first),
+                    onSelectionChanged: (v) => setState(() => _peran = v.first),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -214,7 +207,9 @@ class _RegisterPageState extends State<RegisterPage> {
                     final nilai = v?.trim() ?? '';
                     final mahasiswa = _peran == PeranPengguna.mahasiswa;
                     if (nilai.isEmpty) {
-                      return mahasiswa ? 'NIM wajib diisi' : 'NIP / ID wajib diisi';
+                      return mahasiswa
+                          ? 'NIM wajib diisi'
+                          : 'NIP / ID wajib diisi';
                     }
                     if (mahasiswa && nilai.length != 9) {
                       return 'NIM harus terdiri dari 9 digit angka';
@@ -291,8 +286,9 @@ class _RegisterPageState extends State<RegisterPage> {
                             ? Icons.visibility_off_outlined
                             : Icons.visibility_outlined,
                       ),
-                      onPressed: () =>
-                          setState(() => _isPasswordHidden = !_isPasswordHidden),
+                      onPressed: () => setState(
+                        () => _isPasswordHidden = !_isPasswordHidden,
+                      ),
                     ),
                   ),
                   validator: (v) {
@@ -338,4 +334,4 @@ class _RegisterPageState extends State<RegisterPage> {
       ),
     );
   }
-}
+}

@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../models/app_user.dart';
+import '../../widgets/identitas_kampus.dart';
 import '../../models/laporan.dart';
 import '../../providers/laporan_provider.dart';
-import '../../theme/tema_aksen.dart';
 import '../authentication/login_page.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -45,8 +45,8 @@ class _ProfilePageState extends State<ProfilePage> {
       SnackBar(
         behavior: SnackBarBehavior.floating,
         backgroundColor: error
-            ? const Color(0xFFEF4444)
-            : const Color(0xFF10B981),
+            ? const Color(0xFFAC3838)
+            : const Color(0xFF257054),
         margin: const EdgeInsets.all(16),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         content: Text(pesan, style: const TextStyle(color: Colors.white)),
@@ -111,7 +111,6 @@ class _ProfilePageState extends State<ProfilePage> {
       await GoogleSignIn().signOut();
     } catch (_) {}
     await FirebaseAuth.instance.signOut();
-    TemaAksen.warna.value = null;
 
     if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
@@ -209,11 +208,7 @@ class _ProfilePageState extends State<ProfilePage> {
       context: context,
       applicationName: 'Pengaduan Kampus',
       applicationVersion: '1.0.0',
-      applicationIcon: Icon(
-        Icons.campaign_rounded,
-        size: 40,
-        color: Theme.of(context).colorScheme.primary,
-      ),
+      applicationIcon: const LambangKampus(ukuran: 48),
       children: const [
         SizedBox(height: 8),
         Text(
@@ -232,7 +227,7 @@ class _ProfilePageState extends State<ProfilePage> {
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF1F5F9),
+      backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
         bottom: _menyimpanProfil
             ? const PreferredSize(
@@ -244,8 +239,8 @@ class _ProfilePageState extends State<ProfilePage> {
           'Profil Saya',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        backgroundColor: scheme.primary,
-        foregroundColor: Colors.white,
+        backgroundColor: scheme.surface,
+        foregroundColor: scheme.onSurface,
       ),
       body: user == null
           ? const Center(child: Text('Tidak ada pengguna yang masuk.'))
@@ -284,30 +279,14 @@ class _ProfilePageState extends State<ProfilePage> {
       padding: const EdgeInsets.all(16),
       children: [
         // ---------------------------------------------------------- header
-        Container(
-          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                scheme.primary,
-                Color.alphaBlend(
-                  Colors.black.withValues(alpha: 0.3),
-                  scheme.primary,
-                ),
-              ],
-            ),
-          ),
-          child: Column(
-            children: [
-              CircleAvatar(
-                radius: 44,
-                backgroundColor: Colors.white,
-                child: CircleAvatar(
-                  radius: 41,
-                  backgroundColor: scheme.primary.withValues(alpha: 0.15),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                CircleAvatar(
+                  radius: 32,
+                  backgroundColor: scheme.primary.withValues(alpha: 0.08),
                   backgroundImage: user.photoURL != null
                       ? NetworkImage(user.photoURL!)
                       : null,
@@ -315,53 +294,49 @@ class _ProfilePageState extends State<ProfilePage> {
                       ? Text(
                           _inisial(nama),
                           style: TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w600,
                             color: scheme.primary,
                           ),
                         )
                       : null,
                 ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                nama,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+                const SizedBox(height: 16),
+                Text(
+                  nama,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.titleLarge,
                 ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                email,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.85),
-                  fontSize: 13,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  peran.label,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
+                const SizedBox(height: 6),
+                Text(
+                  email,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: scheme.onSurfaceVariant,
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: scheme.primary.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    peran.label,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: scheme.primary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
         const SizedBox(height: 12),
@@ -417,7 +392,7 @@ class _ProfilePageState extends State<ProfilePage> {
             children: [
               _BarisInfo(ikon: peran.icon, label: 'Peran', nilai: peran.label),
               _BarisInfo(
-                ikon: Icons.numbers_rounded,
+                ikon: Icons.numbers,
                 label: 'NIM / ID',
                 nilai: nim ?? 'Belum diisi',
                 redup: nim == null,
@@ -434,7 +409,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 nilai: email,
               ),
               _BarisInfo(
-                ikon: Icons.security_rounded,
+                ikon: Icons.security_outlined,
                 label: 'Metode Masuk',
                 nilai: lewatGoogle ? 'Akun Google' : 'Email / NIM',
               ),
@@ -463,14 +438,14 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
               const Divider(height: 1, indent: 56),
               _MenuTile(
-                ikon: Icons.lock_reset_rounded,
+                ikon: Icons.lock_reset,
                 judul: 'Ubah Password',
                 subjudul: 'Kirim tautan reset ke email',
                 onTap: () => _ubahPassword(user),
               ),
               const Divider(height: 1, indent: 56),
               _MenuTile(
-                ikon: Icons.info_outline_rounded,
+                ikon: Icons.info_outline,
                 judul: 'Tentang Aplikasi',
                 onTap: _tentangAplikasi,
               ),
@@ -484,7 +459,7 @@ class _ProfilePageState extends State<ProfilePage> {
           width: double.infinity,
           child: ElevatedButton.icon(
             onPressed: _logout,
-            icon: const Icon(Icons.logout_rounded),
+            icon: const Icon(Icons.logout),
             label: const Text(
               'Keluar dari Akun',
               style: TextStyle(fontWeight: FontWeight.bold),
@@ -527,9 +502,12 @@ class _Kartu extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
 
     return Card(
-      elevation: 1.5,
+      elevation: 0,
       margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -675,7 +653,7 @@ class _MenuTile extends StatelessWidget {
       subtitle: subjudul == null
           ? null
           : Text(subjudul!, style: const TextStyle(fontSize: 12)),
-      trailing: Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400),
+      trailing: Icon(Icons.chevron_right, color: Colors.grey.shade400),
     );
   }
 }

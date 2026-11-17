@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../models/app_user.dart';
 import '../../providers/laporan_provider.dart';
 import '../shared/statistik_page.dart';
@@ -8,7 +9,11 @@ class TeknisiKinerjaPage extends StatelessWidget {
   final LaporanProvider provider;
   final AppUser user;
 
-  const TeknisiKinerjaPage({super.key, required this.provider, required this.user});
+  const TeknisiKinerjaPage({
+    super.key,
+    required this.provider,
+    required this.user,
+  });
 
   @override
   Widget build(BuildContext context) {

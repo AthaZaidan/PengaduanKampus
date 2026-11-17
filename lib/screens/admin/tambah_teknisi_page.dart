@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import '../../models/app_user.dart';
 import '../../services/akun_service.dart';
 
@@ -39,8 +40,10 @@ class _TambahTeknisiPageState extends State<TambahTeknisiPage> {
   void _buatPasswordAcak() {
     const huruf = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
     final acak = Random.secure();
-    final sandi =
-        List.generate(10, (_) => huruf[acak.nextInt(huruf.length)]).join();
+    final sandi = List.generate(
+      10,
+      (_) => huruf[acak.nextInt(huruf.length)],
+    ).join();
     setState(() {
       _passwordController.text = sandi;
       _passwordTersembunyi = false; // tampilkan agar admin bisa mencatatnya
@@ -51,8 +54,7 @@ class _TambahTeknisiPageState extends State<TambahTeknisiPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(pesan),
-        backgroundColor:
-            error ? Colors.red.shade700 : const Color(0xFF10B981),
+        backgroundColor: error ? Colors.red.shade700 : const Color(0xFF257054),
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -100,8 +102,10 @@ class _TambahTeknisiPageState extends State<TambahTeknisiPage> {
     } on FirebaseException catch (e) {
       if (!mounted) return;
       if (e.code == 'permission-denied') {
-        _snack('Akun gagal disimpan: izin Firestore ditolak. Pastikan Rules '
-            'mengizinkan admin menulis ke koleksi "users".');
+        _snack(
+          'Akun gagal disimpan: izin Firestore ditolak. Pastikan Rules '
+          'mengizinkan admin menulis ke koleksi "users".',
+        );
       } else {
         _snack('Gagal menyimpan data teknisi: ${e.message ?? e.code}');
       }
@@ -164,7 +168,7 @@ class _TambahTeknisiPageState extends State<TambahTeknisiPage> {
                 ),
               );
             },
-            icon: const Icon(Icons.copy_rounded, size: 18),
+            icon: const Icon(Icons.content_copy_outlined, size: 18),
             label: const Text('Salin'),
           ),
           ElevatedButton(
@@ -183,8 +187,8 @@ class _TambahTeknisiPageState extends State<TambahTeknisiPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Tambah Teknisi'),
-        backgroundColor: scheme.primary,
-        foregroundColor: Colors.white,
+        backgroundColor: scheme.surface,
+        foregroundColor: scheme.onSurface,
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -203,8 +207,7 @@ class _TambahTeknisiPageState extends State<TambahTeknisiPage> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.info_outline_rounded,
-                          size: 20, color: scheme.primary),
+                      Icon(Icons.info_outline, size: 20, color: scheme.primary),
                       const SizedBox(width: 10),
                       const Expanded(
                         child: Text(
@@ -285,7 +288,8 @@ class _TambahTeknisiPageState extends State<TambahTeknisiPage> {
                             : Icons.visibility_outlined,
                       ),
                       onPressed: () => setState(
-                          () => _passwordTersembunyi = !_passwordTersembunyi),
+                        () => _passwordTersembunyi = !_passwordTersembunyi,
+                      ),
                     ),
                   ),
                   validator: (v) {
@@ -321,7 +325,9 @@ class _TambahTeknisiPageState extends State<TambahTeknisiPage> {
                       : const Text(
                           'Buat Akun Teknisi',
                           style: TextStyle(
-                              fontSize: 15, fontWeight: FontWeight.bold),
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                 ),
               ],

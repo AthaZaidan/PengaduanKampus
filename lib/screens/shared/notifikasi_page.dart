@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../models/app_user.dart';
 import '../../models/laporan.dart';
 import '../../providers/laporan_provider.dart';
@@ -36,14 +37,14 @@ class NotifikasiPage extends StatelessWidget {
     final daftar = _kumpulkan();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF1F5F9),
+      backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
         title: const Text(
           'Notifikasi',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        backgroundColor: scheme.primary,
-        foregroundColor: Colors.white,
+        backgroundColor: scheme.surface,
+        foregroundColor: scheme.onSurface,
       ),
       body: daftar.isEmpty
           ? Center(
@@ -52,20 +53,27 @@ class NotifikasiPage extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.notifications_none_rounded,
-                        size: 64, color: Colors.grey.shade400),
+                    Icon(
+                      Icons.notifications_none,
+                      size: 64,
+                      color: Colors.grey.shade400,
+                    ),
                     const SizedBox(height: 12),
                     const Text(
                       'Belum ada notifikasi',
-                      style:
-                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       'Perubahan status laporan akan muncul di sini.',
                       textAlign: TextAlign.center,
-                      style:
-                          TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 13,
+                      ),
                     ),
                   ],
                 ),
@@ -120,9 +128,12 @@ class _NotifTile extends StatelessWidget {
     final catatan = notif.entri.catatan;
 
     return Card(
-      elevation: 1.5,
+      elevation: 0,
       margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+      ),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(14),
@@ -175,13 +186,15 @@ class _NotifTile extends StatelessWidget {
                     const SizedBox(height: 6),
                     Text(
                       '${_waktuRelatif(notif.entri.waktu)} \u2022 ${notif.laporan.id}',
-                      style:
-                          TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey.shade500,
+                      ),
                     ),
                   ],
                 ),
               ),
-              Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400),
+              Icon(Icons.chevron_right, color: Colors.grey.shade400),
             ],
           ),
         ),

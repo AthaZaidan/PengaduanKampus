@@ -34,13 +34,11 @@ class KerangkaNavigasi extends StatelessWidget {
       body: tabs[index].halaman,
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 12,
-              offset: const Offset(0, -3),
-            )
-          ],
+          border: Border(
+            top: BorderSide(
+              color: Theme.of(context).colorScheme.outlineVariant,
+            ),
+          ),
         ),
         child: NavigationBar(
           selectedIndex: index,

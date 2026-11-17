@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../models/app_user.dart';
 import '../../providers/laporan_provider.dart';
 import '../shared/kerangka_navigasi.dart';
@@ -13,11 +14,7 @@ class UserShell extends StatefulWidget {
   final LaporanProvider provider;
   final AppUser user;
 
-  const UserShell({
-    super.key,
-    required this.provider,
-    required this.user,
-  });
+  const UserShell({super.key, required this.provider, required this.user});
 
   @override
   State<UserShell> createState() => _UserShellState();
@@ -33,42 +30,44 @@ class _UserShellState extends State<UserShell> {
 
     return [
       TabNav(
-        'Dashboard',
+        'Beranda',
         Icons.dashboard_outlined,
-        Icons.dashboard_rounded,
+        Icons.dashboard_outlined,
         HomePage(
           provider: p,
           user: u,
-          onBuatLaporan: () => setState(() => _index = 1),
+          onLihatLaporan: () => setState(() => _index = 1),
         ),
       ),
       TabNav(
         'Laporan',
         Icons.list_alt_outlined,
-        Icons.list_alt_rounded,
+        Icons.list_alt_outlined,
         UserLaporanPage(provider: p, user: u),
       ),
-      TabNav('Statistik', Icons.bar_chart_outlined, Icons.bar_chart_rounded,
-          StatistikPage(provider: p, user: u)),
+      TabNav(
+        'Statistik',
+        Icons.bar_chart_outlined,
+        Icons.bar_chart_outlined,
+        StatistikPage(provider: p, user: u),
+      ),
       TabNav(
         'Profil',
-        Icons.person_outline_rounded,
-        Icons.person_rounded,
+        Icons.person_outline,
+        Icons.person_outline,
         ProfilePage(provider: p, user: u),
       ),
     ];
   }
 
-  // Tombol "Buat Laporan" hanya di tab Dashboard dan Laporan.
-  bool get _tampilkanTombolBuat => _index <= 1;
+  // Beranda memiliki tombol utama sendiri; tombol melayang dipakai di daftar laporan.
+  bool get _tampilkanTombolBuat => _index == 1;
 
   void _buatLaporan() {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => BuatLaporanPage(
-          provider: widget.provider,
-          user: widget.user,
-        ),
+        builder: (_) =>
+            BuatLaporanPage(provider: widget.provider, user: widget.user),
       ),
     );
   }
@@ -86,8 +85,8 @@ class _UserShellState extends State<UserShell> {
               onPressed: _buatLaporan,
               backgroundColor: scheme.primary,
               foregroundColor: Colors.white,
-              elevation: 4,
-              icon: const Icon(Icons.add_rounded),
+              elevation: 0,
+              icon: const Icon(Icons.add),
               label: const Text(
                 'Buat Laporan',
                 style: TextStyle(fontWeight: FontWeight.bold),

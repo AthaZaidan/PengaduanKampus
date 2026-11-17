@@ -354,7 +354,7 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
           hasil.add(
             garis(
               'Ganti Teknisi',
-              Icons.swap_horiz_rounded,
+              Icons.swap_horiz,
               StatusLaporan.ditugaskan.color,
               _tugaskan,
             ),
@@ -419,95 +419,67 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF1F5F9),
+      backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
-        title: Text(
-          _laporan.id,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontFamily: 'monospace',
-          ),
-        ),
-        backgroundColor: scheme.primary,
-        foregroundColor: Colors.white,
+        title: const Text('Detail laporan'),
+        backgroundColor: scheme.surface,
+        foregroundColor: scheme.onSurface,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Status Banner
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-              decoration: BoxDecoration(
-                color: _laporan.status.color.withValues(alpha: 0.1),
-                border: Border.all(
-                  color: _laporan.status.color.withValues(alpha: 0.4),
-                ),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    _laporan.status.icon,
-                    color: _laporan.status.color,
-                    size: 28,
-                  ),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Status Laporan',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade600,
-                        ),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'STATUS LAPORAN',
+                      style: TextStyle(
+                        fontSize: 10,
+                        letterSpacing: 1.1,
+                        color: scheme.onSurfaceVariant,
                       ),
-                      Text(
-                        _laporan.status.label,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18,
-                          color: _laporan.status.color,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 5,
                     ),
-                    decoration: BoxDecoration(
-                      color: _laporan.prioritas.color.withValues(alpha: 0.1),
-                      border: Border.all(
-                        color: _laporan.prioritas.color.withValues(alpha: 0.4),
-                      ),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 10,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        Icon(
-                          Icons.flag_rounded,
-                          size: 14,
-                          color: _laporan.prioritas.color,
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              _laporan.status.icon,
+                              size: 21,
+                              color: _laporan.status.color,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              _laporan.status.label,
+                              style: TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w600,
+                                color: _laporan.status.color,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 4),
                         Text(
-                          _laporan.prioritas.label,
+                          'Prioritas ${_laporan.prioritas.label.toLowerCase()}',
                           style: TextStyle(
                             fontSize: 12,
-                            fontWeight: FontWeight.w600,
                             color: _laporan.prioritas.color,
                           ),
                         ),
                       ],
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 16),
@@ -517,7 +489,12 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
               title: 'Informasi Laporan',
               children: [
                 _InfoRow(
-                  icon: Icons.title_rounded,
+                  icon: Icons.tag,
+                  label: 'Nomor laporan',
+                  value: _laporan.id,
+                ),
+                _InfoRow(
+                  icon: Icons.title,
                   label: 'Judul',
                   value: _laporan.judul,
                   isBold: true,
@@ -533,7 +510,7 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
                   value: _laporan.lokasi,
                 ),
                 _InfoRow(
-                  icon: Icons.person_outline_rounded,
+                  icon: Icons.person_outline,
                   label: 'Pelapor',
                   value: _laporan.pelapor,
                 ),
@@ -560,7 +537,7 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
 
             // Deskripsi
             Card(
-              elevation: 1.5,
+              elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
               ),
@@ -632,11 +609,11 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
                 _laporan.catatanAdmin!.isNotEmpty) ...[
               const SizedBox(height: 12),
               Card(
-                elevation: 1.5,
+                elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
                 ),
-                color: const Color(0xFF10B981).withValues(alpha: 0.06),
+                color: const Color(0xFF257054).withValues(alpha: 0.06),
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
@@ -647,14 +624,14 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
                           const Icon(
                             Icons.comment_outlined,
                             size: 18,
-                            color: Color(0xFF10B981),
+                            color: Color(0xFF257054),
                           ),
                           const SizedBox(width: 8),
                           const Text(
                             'Catatan Penanganan',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF10B981),
+                              color: Color(0xFF257054),
                               fontSize: 14,
                             ),
                           ),
@@ -735,8 +712,11 @@ class _PanelAksi extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
 
     return Card(
-      elevation: 1.5,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -941,8 +921,11 @@ class _FotoCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
 
     return Card(
-      elevation: 1.5,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -1011,8 +994,11 @@ class _StatusTimeline extends StatelessWidget {
     final items = riwayat.reversed.toList();
 
     return Card(
-      elevation: 1.5,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -1020,7 +1006,7 @@ class _StatusTimeline extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Icons.timeline_rounded, size: 18, color: scheme.primary),
+                Icon(Icons.timeline, size: 18, color: scheme.primary),
                 const SizedBox(width: 8),
                 Text(
                   'Riwayat Status',
@@ -1156,8 +1142,11 @@ class _InfoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Card(
-      elevation: 1.5,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -1165,11 +1154,7 @@ class _InfoCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(
-                  Icons.info_outline_rounded,
-                  size: 18,
-                  color: scheme.primary,
-                ),
+                Icon(Icons.info_outline, size: 18, color: scheme.primary),
                 const SizedBox(width: 8),
                 Text(
                   title,

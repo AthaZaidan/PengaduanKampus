@@ -58,11 +58,9 @@ extension PeranPenggunaExt on PeranPengguna {
   bool get isAdmin => this == PeranPengguna.admin;
   bool get isTeknisi => this == PeranPengguna.teknisi;
 
-  /// Warna aksen tampilan untuk peran ini.
+  /// Warna identitas kampus, konsisten untuk setiap peran.
   Color get warna {
-    if (isAdmin) return const Color(0xFF5E35B1);
-    if (isTeknisi) return const Color(0xFF00796B);
-    return const Color(0xFF1565C0);
+    return const Color(0xFF203B5C);
   }
 }
 

@@ -1,8 +1,5 @@
 # Pengaduan Kampus 
 
-Panduan penyimpanan laporan, foto, aturan akses, aktivasi Firebase, dan push manual tahap 1:
-[Firebase Setup](docs/FIREBASE_SETUP.md).
-
 Aplikasi mobile berbasis Flutter untuk sistem pelaporan dan pengaduan fasilitas atau layanan di lingkungan kampus.
  Fitur Utama (Rencana Pengembangan)
 - **Autentikasi**: Login & Registrasi mahasiswa/staf

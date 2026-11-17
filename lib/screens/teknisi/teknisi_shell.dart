@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../models/app_user.dart';
 import '../../providers/laporan_provider.dart';
 import '../shared/kerangka_navigasi.dart';
@@ -11,11 +12,7 @@ class TeknisiShell extends StatefulWidget {
   final LaporanProvider provider;
   final AppUser user;
 
-  const TeknisiShell({
-    super.key,
-    required this.provider,
-    required this.user,
-  });
+  const TeknisiShell({super.key, required this.provider, required this.user});
 
   @override
   State<TeknisiShell> createState() => _TeknisiShellState();
@@ -33,19 +30,19 @@ class _TeknisiShellState extends State<TeknisiShell> {
       TabNav(
         'Tugas',
         Icons.assignment_outlined,
-        Icons.assignment_rounded,
+        Icons.assignment_outlined,
         TeknisiTugasPage(provider: p, user: u),
       ),
       TabNav(
         'Kinerja',
         Icons.bar_chart_outlined,
-        Icons.bar_chart_rounded,
+        Icons.bar_chart_outlined,
         TeknisiKinerjaPage(provider: p, user: u),
       ),
       TabNav(
         'Profil',
-        Icons.person_outline_rounded,
-        Icons.person_rounded,
+        Icons.person_outline,
+        Icons.person_outline,
         ProfilePage(provider: p, user: u),
       ),
     ];

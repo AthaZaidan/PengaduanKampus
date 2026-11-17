@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 
 import '../models/app_user.dart';
 import '../providers/laporan_provider.dart';
-import '../theme/tema_aksen.dart';
 import '../widgets/status_sinkronisasi.dart';
 import 'admin/admin_shell.dart';
 import 'teknisi/teknisi_shell.dart';
@@ -84,13 +83,6 @@ class _MainShellState extends State<MainShell> {
 
         final aktif = asli;
 
-        // Tema aksen berbeda untuk tiap peran (diterapkan di MaterialApp).
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (TemaAksen.warna.value != aktif.peran.warna) {
-            TemaAksen.warna.value = aktif.peran.warna;
-          }
-        });
-
         if (aktif.peran.isAdmin) {
           return _denganStatus(
             AdminShell(
@@ -120,10 +112,16 @@ class _MainShellState extends State<MainShell> {
     );
   }
 
-  Widget _denganStatus(Widget halaman) => Column(
-    children: [
-      StatusSinkronisasi(provider: widget.provider),
-      Expanded(child: halaman),
-    ],
+  Widget _denganStatus(Widget halaman) => ColoredBox(
+    color: Theme.of(context).colorScheme.surface,
+    child: SafeArea(
+      bottom: false,
+      child: Column(
+        children: [
+          StatusSinkronisasi(provider: widget.provider),
+          Expanded(child: halaman),
+        ],
+      ),
+    ),
   );
 }

@@ -1,518 +1,231 @@
 import 'package:flutter/material.dart';
+
 import '../../models/laporan.dart';
 import '../../models/app_user.dart';
 import '../../providers/laporan_provider.dart';
+import '../../widgets/identitas_kampus.dart';
+import '../../widgets/komponen_kampus.dart';
 import '../shared/detail_laporan_page.dart';
-import 'buat_laporan_page.dart';
 import '../shared/notifikasi_page.dart';
+import 'buat_laporan_page.dart';
 
 class HomePage extends StatelessWidget {
   final LaporanProvider provider;
   final AppUser user;
-  final VoidCallback onBuatLaporan;
-
+  final VoidCallback onLihatLaporan;
   const HomePage({
     super.key,
     required this.provider,
     required this.user,
-    required this.onBuatLaporan,
+    required this.onLihatLaporan,
   });
 
-  static String _inisial(String nama) {
-    final kata =
-        nama.trim().split(RegExp(r'\s+')).where((k) => k.isNotEmpty).toList();
-    if (kata.isEmpty) return '?';
-    if (kata.length == 1) return kata.first[0].toUpperCase();
-    return (kata.first[0] + kata[1][0]).toUpperCase();
-  }
-  
+  void _buat(BuildContext context) => Navigator.of(context).push(
+    MaterialPageRoute(
+      builder: (_) => BuatLaporanPage(provider: provider, user: user),
+    ),
+  );
 
   @override
-  Widget build(BuildContext context) {
-    // Rebuild otomatis setiap provider memanggil notifyListeners().
-    return ListenableBuilder(
-      listenable: provider,
-      builder: (context, _) => _buildContent(context),
-    );
-  }
-
-  Widget _buildContent(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final laporanList = provider.untuk(user);
-    int hitung(Set<StatusLaporan> s) =>
-        laporanList.where((l) => s.contains(l.status)).length;
-    final menunggu = hitung({
-      StatusLaporan.menunggu,
-      StatusLaporan.diverifikasi,
-      StatusLaporan.ditugaskan,
-    });
-    final diproses = hitung({StatusLaporan.diproses});
-    final selesai = hitung({StatusLaporan.selesai});
-    final total = laporanList.length;
-
-    return Scaffold(
-      backgroundColor: const Color(0xFFF1F5F9),
-      body: CustomScrollView(
-        slivers: [
-          // Header SliverAppBar
-          SliverAppBar(
-            expandedHeight: 200,
-            floating: false,
-            pinned: true,
-            backgroundColor: scheme.primary,
-            flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      scheme.primary,
-                      const Color(0xFF0D47A1),
-                    ],
-                  ),
-                ),
-                child: SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Selamat Datang 👋',
-                                  style: TextStyle(
-                                    color: Colors.white.withValues(alpha: 0.85),
-                                    fontSize: 13,
-                                  ),
-                                ),
-                                Text(
-                                  user.nama,
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            CircleAvatar(
-                              radius: 24,
-                              backgroundColor:
-                                  Colors.white.withValues(alpha: 0.2),
-                              child: Text(
-                                _inisial(user.nama),
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Total $total Laporan',
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.9),
-                            fontSize: 13,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              title: const Text(
-                'Pengaduan Kampus',
-                style: TextStyle(color: Colors.white, fontSize: 16),
-              ),
-              titlePadding: const EdgeInsets.only(left: 16, bottom: 14),
-            ),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.notifications_outlined, color: Colors.white),
-                tooltip: 'Notifikasi',
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => NotifikasiPage(provider: provider, user: user),
-                  ),
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: provider,
+    builder: (context, _) {
+      final scheme = Theme.of(context).colorScheme;
+      final semua = provider.untuk(user);
+      final aktif = semua.where((l) => l.aktif).length;
+      final menunggu = semua
+          .where((l) => l.aktif && l.status != StatusLaporan.diproses)
+          .length;
+      final proses = semua
+          .where((l) => l.status == StatusLaporan.diproses)
+          .length;
+      final selesai = semua
+          .where((l) => l.status == StatusLaporan.selesai)
+          .length;
+      return Scaffold(
+        appBar: AppBar(
+          title: const Row(
+            children: [
+              LambangKampus(ukuran: 32),
+              SizedBox(width: 10),
+              Flexible(
+                child: Text(
+                  'Pengaduan Kampus',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
           ),
-
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Statistik Cards
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _StatCard(
-                          label: 'Menunggu',
-                          count: menunggu,
-                          icon: StatusLaporan.menunggu.icon,
-                          color: StatusLaporan.menunggu.color,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _StatCard(
-                          label: 'Diproses',
-                          count: diproses,
-                          icon: StatusLaporan.diproses.icon,
-                          color: StatusLaporan.diproses.color,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _StatCard(
-                          label: 'Selesai',
-                          count: selesai,
-                          icon: StatusLaporan.selesai.icon,
-                          color: StatusLaporan.selesai.color,
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Aksi Cepat
-                  Text(
-                    'Aksi Cepat',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey.shade800,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _QuickActionCard(
-                          icon: Icons.add_circle_outline_rounded,
-                          label: 'Buat Laporan',
-                          color: scheme.primary,
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  BuatLaporanPage(provider: provider, user: user),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _QuickActionCard(
-                          icon: Icons.search_rounded,
-                          label: 'Cari Laporan',
-                          color: const Color(0xFF7C3AED),
-                          onTap: onBuatLaporan,
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Laporan Terbaru
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Laporan Terbaru',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey.shade800,
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: onBuatLaporan,
-                        child: const Text('Lihat Semua'),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                ],
-              ),
-            ),
-          ),
-
-          // Daftar Laporan Terbaru
-          if (laporanList.isEmpty)
-            SliverToBoxAdapter(
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(40),
-                  child: Column(
-                    children: [
-                      Icon(Icons.inbox_outlined,
-                          size: 60, color: Colors.grey.shade400),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Belum ada laporan',
-                        style: TextStyle(color: Colors.grey.shade500),
-                      ),
-                    ],
-                  ),
+          actions: [
+            IconButton(
+              tooltip: 'Notifikasi',
+              icon: const Icon(Icons.notifications_outlined),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) =>
+                      NotifikasiPage(provider: provider, user: user),
                 ),
               ),
-            )
-          else
-            SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  final laporan = laporanList[index];
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 4),
-                    child: _LaporanCard(
-                      laporan: laporan,
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => DetailLaporanPage(
-                            laporan: laporan,
-                            provider: provider,
-                            user: user,
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                },
-                childCount: laporanList.length > 5 ? 5 : laporanList.length,
-              ),
             ),
-          const SliverToBoxAdapter(child: SizedBox(height: 100)),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatCard extends StatelessWidget {
-  final String label;
-  final int count;
-  final IconData icon;
-  final Color color;
-
-  const _StatCard({
-    required this.label,
-    required this.count,
-    required this.icon,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
-        child: Column(
+            const SizedBox(width: 8),
+          ],
+        ),
+        body: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 24, 20, 104),
           children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
-                shape: BoxShape.circle,
+            Text(
+              'LAYANAN FASILITAS KAMPUS',
+              style: TextStyle(
+                fontSize: 10,
+                letterSpacing: 1.5,
+                fontWeight: FontWeight.w600,
+                color: scheme.onSurfaceVariant,
               ),
-              child: Icon(icon, color: color, size: 20),
             ),
             const SizedBox(height: 8),
             Text(
-              '$count',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
+              'Selamat datang, ${user.nama}',
+              style: Theme.of(context).textTheme.headlineSmall,
             ),
+            const SizedBox(height: 8),
             Text(
-              label,
+              aktif == 0
+                  ? 'Sampaikan kendala fasilitas dan pantau penanganannya di sini.'
+                  : '$aktif laporan Anda masih dalam penanganan. Pantau perkembangannya melalui daftar laporan.',
               style: TextStyle(
-                fontSize: 11,
-                color: Colors.grey.shade600,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _QuickActionCard extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _QuickActionCard({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
-          border: Border.all(color: color.withValues(alpha: 0.3)),
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: color, size: 26),
-            const SizedBox(width: 10),
-            Text(
-              label,
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                color: color,
+                fontSize: 13,
+                height: 1.6,
+                color: scheme.onSurfaceVariant,
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _LaporanCard extends StatelessWidget {
-  final Laporan laporan;
-  final VoidCallback onTap;
-
-  const _LaporanCard({required this.laporan, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      elevation: 1.5,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(7),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .primary
-                          .withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
+            const SizedBox(height: 24),
+            Card(
+              color: scheme.primary,
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Icons.edit_note_outlined,
+                      size: 27,
+                      color: Colors.white,
                     ),
-                    child: Icon(
-                      laporan.kategori.icon,
-                      size: 18,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      laporan.judul,
-                      style: const TextStyle(
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Ada fasilitas yang perlu diperbaiki?',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 17,
+                        height: 1.4,
                         fontWeight: FontWeight.w600,
-                        fontSize: 14,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Sertakan lokasi dan foto agar petugas dapat menindaklanjuti dengan tepat.',
+                      style: TextStyle(
+                        color: Color(0xFFD8E2EC),
+                        fontSize: 12,
+                        height: 1.6,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    FilledButton.icon(
+                      onPressed: () => _buat(context),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: scheme.primary,
+                      ),
+                      icon: const Icon(Icons.add, size: 18),
+                      label: const Text('Buat laporan'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 28),
+            const JudulBagian('Ringkasan laporan'),
+            const SizedBox(height: 14),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final width = (constraints.maxWidth - 12) / 2;
+                return Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    SizedBox(
+                      width: width,
+                      child: RingkasanAngka(
+                        label: 'Total laporan',
+                        angka: semua.length,
+                        ikon: Icons.assignment_outlined,
+                        warna: scheme.primary,
+                      ),
+                    ),
+                    SizedBox(
+                      width: width,
+                      child: RingkasanAngka(
+                        label: 'Menunggu',
+                        angka: menunggu,
+                        ikon: StatusLaporan.menunggu.icon,
+                        warna: StatusLaporan.menunggu.color,
+                      ),
+                    ),
+                    SizedBox(
+                      width: width,
+                      child: RingkasanAngka(
+                        label: 'Dikerjakan',
+                        angka: proses,
+                        ikon: StatusLaporan.diproses.icon,
+                        warna: StatusLaporan.diproses.color,
+                      ),
+                    ),
+                    SizedBox(
+                      width: width,
+                      child: RingkasanAngka(
+                        label: 'Selesai',
+                        angka: selesai,
+                        ikon: StatusLaporan.selesai.icon,
+                        warna: StatusLaporan.selesai.color,
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+            const SizedBox(height: 22),
+            JudulBagian(
+              'Laporan terbaru',
+              aksi: 'Lihat semua',
+              onAksi: onLihatLaporan,
+            ),
+            const SizedBox(height: 10),
+            if (semua.isEmpty)
+              const Card(
+                child: KeadaanKosong(
+                  judul: 'Belum ada laporan',
+                  keterangan: 'Laporan yang Anda kirim akan tercatat di sini beserta perkembangannya.',
+                ),
+              )
+            else
+              for (final l in semua.take(3))
+                KartuLaporan(
+                  laporan: l,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => DetailLaporanPage(
+                        laporan: l,
+                        provider: provider,
+                        user: user,
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: laporan.status.color.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(laporan.status.icon,
-                            size: 11, color: laporan.status.color),
-                        const SizedBox(width: 3),
-                        Text(
-                          laporan.status.label,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: laporan.status.color,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                laporan.deskripsi,
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Icon(Icons.location_on_outlined,
-                      size: 13, color: Colors.grey.shade500),
-                  const SizedBox(width: 3),
-                  Text(
-                    laporan.lokasi,
-                    style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
-                  ),
-                  const Spacer(),
-                  Icon(Icons.access_time_rounded,
-                      size: 13, color: Colors.grey.shade500),
-                  const SizedBox(width: 3),
-                  Text(
-                    _formatTanggal(laporan.tanggalLapor),
-                    style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
-                  ),
-                ],
-              ),
-            ],
-          ),
+                ),
+          ],
         ),
-      ),
-    );
-  }
-
-  String _formatTanggal(DateTime date) {
-    final now = DateTime.now();
-    final diff = now.difference(date);
-    if (diff.inDays > 0) return '${diff.inDays} hari lalu';
-    if (diff.inHours > 0) return '${diff.inHours} jam lalu';
-    return '${diff.inMinutes} menit lalu';
-  }
+      );
+    },
+  );
 }

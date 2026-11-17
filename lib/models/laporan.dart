@@ -220,34 +220,34 @@ extension StatusLaporanExt on StatusLaporan {
   Color get color {
     switch (this) {
       case StatusLaporan.menunggu:
-        return const Color(0xFFF59E0B);
+        return const Color(0xFF94620E);
       case StatusLaporan.diverifikasi:
-        return const Color(0xFF8B5CF6);
+        return const Color(0xFF66588A);
       case StatusLaporan.ditugaskan:
-        return const Color(0xFF06B6D4);
+        return const Color(0xFF267583);
       case StatusLaporan.diproses:
-        return const Color(0xFF3B82F6);
+        return const Color(0xFF315F96);
       case StatusLaporan.selesai:
-        return const Color(0xFF10B981);
+        return const Color(0xFF257054);
       case StatusLaporan.ditolak:
-        return const Color(0xFFEF4444);
+        return const Color(0xFFAC3838);
     }
   }
 
   IconData get icon {
     switch (this) {
       case StatusLaporan.menunggu:
-        return Icons.hourglass_empty_rounded;
+        return Icons.hourglass_empty;
       case StatusLaporan.diverifikasi:
-        return Icons.verified_rounded;
+        return Icons.verified_outlined;
       case StatusLaporan.ditugaskan:
-        return Icons.assignment_ind_rounded;
+        return Icons.assignment_ind_outlined;
       case StatusLaporan.diproses:
-        return Icons.autorenew_rounded;
+        return Icons.sync_outlined;
       case StatusLaporan.selesai:
-        return Icons.check_circle_rounded;
+        return Icons.check_circle_outline;
       case StatusLaporan.ditolak:
-        return Icons.cancel_rounded;
+        return Icons.cancel_outlined;
     }
   }
 
@@ -277,17 +277,17 @@ extension KategoriExt on KategoriKerusakan {
   IconData get icon {
     switch (this) {
       case KategoriKerusakan.fasilitas:
-        return Icons.chair_alt_rounded;
+        return Icons.chair_alt_outlined;
       case KategoriKerusakan.listrik:
-        return Icons.bolt_rounded;
+        return Icons.bolt_outlined;
       case KategoriKerusakan.airBersih:
-        return Icons.water_drop_rounded;
+        return Icons.water_drop_outlined;
       case KategoriKerusakan.internet:
-        return Icons.wifi_rounded;
+        return Icons.wifi_outlined;
       case KategoriKerusakan.kebersihan:
-        return Icons.cleaning_services_rounded;
+        return Icons.cleaning_services_outlined;
       case KategoriKerusakan.lainnya:
-        return Icons.more_horiz_rounded;
+        return Icons.more_horiz;
     }
   }
 }
@@ -309,9 +309,9 @@ extension PrioritasExt on PrioritasLaporan {
       case PrioritasLaporan.rendah:
         return const Color(0xFF6B7280);
       case PrioritasLaporan.sedang:
-        return const Color(0xFFF59E0B);
+        return const Color(0xFF94620E);
       case PrioritasLaporan.tinggi:
-        return const Color(0xFFEF4444);
+        return const Color(0xFFAC3838);
     }
   }
 }

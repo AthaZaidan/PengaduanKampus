@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+
 import 'foto_viewer.dart';
 
 /// Kotak pemilih foto (kamera / galeri) yang berdiri sendiri.
@@ -10,11 +11,7 @@ class FotoPickerField extends StatefulWidget {
   final int maxFoto;
   final ValueChanged<List<Uint8List>> onChanged;
 
-  const FotoPickerField({
-    super.key,
-    required this.onChanged,
-    this.maxFoto = 3,
-  });
+  const FotoPickerField({super.key, required this.onChanged, this.maxFoto = 3});
 
   @override
   State<FotoPickerField> createState() => _FotoPickerFieldState();
@@ -134,8 +131,11 @@ class _FotoPickerFieldState extends State<FotoPickerField> {
                           color: Colors.black54,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.close_rounded,
-                            size: 14, color: Colors.white),
+                        child: const Icon(
+                          Icons.close,
+                          size: 14,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),
@@ -151,15 +151,19 @@ class _FotoPickerFieldState extends State<FotoPickerField> {
                 height: _ukuran,
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  border:
-                      Border.all(color: scheme.primary.withValues(alpha: 0.4)),
+                  border: Border.all(
+                    color: scheme.primary.withValues(alpha: 0.4),
+                  ),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.add_a_photo_outlined,
-                        color: scheme.primary, size: 24),
+                    Icon(
+                      Icons.add_a_photo_outlined,
+                      color: scheme.primary,
+                      size: 24,
+                    ),
                     const SizedBox(height: 4),
                     Text(
                       '${_foto.length}/${widget.maxFoto}',

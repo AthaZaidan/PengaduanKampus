@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+
 import '../../models/app_user.dart';
 import '../../models/laporan.dart';
 import '../../models/statistik_laporan.dart';
@@ -26,14 +27,14 @@ class StatistikPage extends StatelessWidget {
     final stat = StatistikLaporan.dari(provider.untuk(user));
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF1F5F9),
+      backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
         title: const Text(
           'Statistik',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        backgroundColor: scheme.primary,
-        foregroundColor: Colors.white,
+        backgroundColor: scheme.surface,
+        foregroundColor: scheme.onSurface,
       ),
       body: stat.total == 0
           ? const _KosongState()
@@ -44,7 +45,7 @@ class StatistikPage extends StatelessWidget {
                 const SizedBox(height: 12),
                 _KartuSeksi(
                   judul: 'Status Laporan',
-                  ikon: Icons.donut_large_rounded,
+                  ikon: Icons.donut_large_outlined,
                   child: _StatusDonut(stat: stat),
                 ),
                 const SizedBox(height: 12),
@@ -62,7 +63,7 @@ class StatistikPage extends StatelessWidget {
                 const SizedBox(height: 12),
                 _KartuSeksi(
                   judul: '7 Hari Terakhir',
-                  ikon: Icons.bar_chart_rounded,
+                  ikon: Icons.bar_chart_outlined,
                   child: _TrenChart(stat: stat),
                 ),
               ],
@@ -82,8 +83,11 @@ class _KosongState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.bar_chart_rounded,
-                size: 64, color: Colors.grey.shade400),
+            Icon(
+              Icons.bar_chart_outlined,
+              size: 64,
+              color: Colors.grey.shade400,
+            ),
             const SizedBox(height: 12),
             const Text(
               'Belum ada data statistik',
@@ -118,9 +122,12 @@ class _KartuSeksi extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
 
     return Card(
-      elevation: 1.5,
+      elevation: 0,
       margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -177,7 +184,7 @@ class _RingkasanGrid extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: _MiniStat(
-                ikon: Icons.task_alt_rounded,
+                ikon: Icons.task_alt,
                 warna: StatusLaporan.selesai.color,
                 nilai: '${(stat.tingkatPenyelesaian * 100).round()}%',
                 label: 'Tingkat Penyelesaian',
@@ -191,7 +198,7 @@ class _RingkasanGrid extends StatelessWidget {
             Expanded(
               child: _MiniStat(
                 ikon: Icons.timer_outlined,
-                warna: const Color(0xFF8B5CF6),
+                warna: const Color(0xFF66588A),
                 nilai: StatistikLaporan.formatDurasi(stat.rataRataPenyelesaian),
                 label: 'Rata-rata Penyelesaian',
               ),
@@ -199,7 +206,7 @@ class _RingkasanGrid extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: _MiniStat(
-                ikon: Icons.hourglass_empty_rounded,
+                ikon: Icons.hourglass_empty,
                 warna: StatusLaporan.menunggu.color,
                 nilai: '${stat.menunggu}',
                 label: 'Menunggu Tindakan',
@@ -228,9 +235,12 @@ class _MiniStat extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      elevation: 1.5,
+      elevation: 0,
       margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Row(
@@ -351,8 +361,10 @@ class _StatusDonut extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       Expanded(
-                        child:
-                            Text(s.label, style: const TextStyle(fontSize: 13)),
+                        child: Text(
+                          s.label,
+                          style: const TextStyle(fontSize: 13),
+                        ),
                       ),
                       Text(
                         '${stat.perStatus[s] ?? 0}',
@@ -506,8 +518,10 @@ class _KategoriBars extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final urut = KategoriKerusakan.values.toList()
-      ..sort((a, b) =>
-          (stat.perKategori[b] ?? 0).compareTo(stat.perKategori[a] ?? 0));
+      ..sort(
+        (a, b) =>
+            (stat.perKategori[b] ?? 0).compareTo(stat.perKategori[a] ?? 0),
+      );
     final maks = stat.perKategori.values.fold<int>(0, math.max);
     final teratas = urut.first;
     final jumlahTeratas = stat.perKategori[teratas] ?? 0;
@@ -555,7 +569,7 @@ class _PrioritasBars extends StatelessWidget {
         for (final p in urutan)
           _BarRow(
             label: p.label,
-            ikon: Icons.flag_rounded,
+            ikon: Icons.flag_outlined,
             nilai: stat.perPrioritas[p] ?? 0,
             maks: maks,
             warna: p.color,
@@ -583,7 +597,7 @@ class _TrenChart extends StatelessWidget {
     final maks = stat.tujuhHari.fold<int>(0, (m, e) => math.max(m, e.value));
 
     return SizedBox(
-      height: 140,
+      height: 140 + (MediaQuery.textScalerOf(context).scale(11) - 11) * 4,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
@@ -594,7 +608,9 @@ class _TrenChart extends StatelessWidget {
                 tinggi: stat.tujuhHari[i].value == 0
                     ? 3.0
                     : math.max(
-                        8.0, _tinggiMaks * stat.tujuhHari[i].value / maks),
+                        8.0,
+                        _tinggiMaks * stat.tujuhHari[i].value / maks,
+                      ),
                 label: _namaHari[stat.tujuhHari[i].key.weekday - 1],
                 hariIni: i == stat.tujuhHari.length - 1,
                 warna: scheme.primary,
