@@ -67,6 +67,7 @@ flutter:
   uses-material-design: true
 
   assets:
+    - assets/branding/ikon-kampus.png
     - assets/branding/logo_tile.png
     - assets/branding/logo_glyph_white.png
 

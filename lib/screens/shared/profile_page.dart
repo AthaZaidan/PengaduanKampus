@@ -107,15 +107,6 @@ class _ProfilePageState extends State<ProfilePage> {
     );
     if (yakin != true) return;
 
-    try {} catch (_) {
-      if (mounted) {
-        _snack(
-          'Belum dapat menonaktifkan notifikasi perangkat. Periksa koneksi sebelum keluar.',
-          error: true,
-        );
-      }
-      return;
-    }
     // Logout dari Google Sign-In (jika dipakai) dan Firebase Auth
     try {
       await GoogleSignIn().signOut();
@@ -129,32 +120,31 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Future<void> _ubahNama(User user, String namaSekarang) async {
+  Future<void> _ubahProfil(
+    User user, {
+    required String namaSekarang,
+    required String? nimSekarang,
+    required String? teleponSekarang,
+  }) async {
     if (_menyimpanProfil) return;
-    final controller = TextEditingController(text: namaSekarang);
-    final nama = await showDialog<String>(
+    final hasil = await showDialog<_DataProfil>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Ubah Nama'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          textCapitalization: TextCapitalization.words,
-          decoration: const InputDecoration(labelText: 'Nama lengkap'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Batal'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-            child: const Text('Simpan'),
-          ),
-        ],
+      builder: (_) => _DialogEditProfil(
+        peran: widget.user.peran,
+        namaAwal: namaSekarang,
+        nimAwal: nimSekarang ?? '',
+        teleponAwal: teleponSekarang ?? '',
       ),
     );
-    if (nama == null || nama.isEmpty || nama == namaSekarang) return;
+    if (hasil == null) return;
+
+    final nimSimpan = hasil.nim.isEmpty ? '-' : hasil.nim;
+    final teleponSimpan = hasil.telepon.isEmpty ? '-' : hasil.telepon;
+    if (hasil.nama == namaSekarang &&
+        nimSimpan == (nimSekarang ?? '-') &&
+        teleponSimpan == (teleponSekarang ?? '-')) {
+      return;
+    }
 
     setState(() => _menyimpanProfil = true);
     try {
@@ -163,21 +153,27 @@ class _ProfilePageState extends State<ProfilePage> {
         final ref = db.collection('users').doc(user.uid);
         final doc = await tx.get(ref);
         if (!doc.exists) throw StateError('Profil belum tersedia.');
-        tx.update(ref, {'name': nama});
+        tx.update(ref, {
+          'name': hasil.nama,
+          'nim': nimSimpan,
+          'phone': teleponSimpan,
+        });
       });
-      try {
-        await user.updateDisplayName(nama);
-        await user.reload();
-      } catch (_) {
-        // Firestore adalah sumber profil utama; nama Auth dapat diselaraskan kemudian.
+      if (hasil.nama != namaSekarang) {
+        try {
+          await user.updateDisplayName(hasil.nama);
+          await user.reload();
+        } catch (_) {
+          // Firestore adalah sumber profil utama; nama Auth dapat diselaraskan kemudian.
+        }
       }
       if (!mounted) return;
       setState(() {});
-      _snack('Nama berhasil diperbarui');
+      _snack('Profil berhasil diperbarui');
     } catch (_) {
       if (!mounted) return;
       _snack(
-        'Nama belum tersimpan. Periksa koneksi dan coba lagi.',
+        'Profil belum tersimpan. Periksa koneksi dan coba lagi.',
         error: true,
       );
     } finally {
@@ -441,7 +437,7 @@ class _ProfilePageState extends State<ProfilePage> {
           padding: const EdgeInsets.symmetric(vertical: 6),
           child: Column(
             children: [
-              if (widget.user.peran.isAdmin)
+              if (widget.user.peran.isAdmin) ...[
                 _MenuTile(
                   ikon: Icons.location_on_outlined,
                   judul: 'Kelola lokasi kampus',
@@ -449,10 +445,18 @@ class _ProfilePageState extends State<ProfilePage> {
                     MaterialPageRoute(builder: (_) => const KelolaLokasiPage()),
                   ),
                 ),
+                const Divider(height: 1, indent: 56),
+              ],
               _MenuTile(
                 ikon: Icons.edit_outlined,
-                judul: 'Ubah Nama',
-                onTap: () => _ubahNama(user, nama),
+                judul: 'Edit Profil',
+                subjudul: 'Ubah nama, NIM/ID, dan nomor HP',
+                onTap: () => _ubahProfil(
+                  user,
+                  namaSekarang: nama,
+                  nimSekarang: nim,
+                  teleponSekarang: telepon,
+                ),
               ),
               const Divider(height: 1, indent: 56),
               _MenuTile(
@@ -672,6 +676,151 @@ class _MenuTile extends StatelessWidget {
           ? null
           : Text(subjudul!, style: const TextStyle(fontSize: 12)),
       trailing: Icon(Icons.chevron_right, color: Colors.grey.shade400),
+    );
+  }
+}
+
+class _DataProfil {
+  final String nama;
+  final String nim;
+  final String telepon;
+
+  const _DataProfil({
+    required this.nama,
+    required this.nim,
+    required this.telepon,
+  });
+}
+
+class _DialogEditProfil extends StatefulWidget {
+  final PeranPengguna peran;
+  final String namaAwal;
+  final String nimAwal;
+  final String teleponAwal;
+
+  const _DialogEditProfil({
+    required this.peran,
+    required this.namaAwal,
+    required this.nimAwal,
+    required this.teleponAwal,
+  });
+
+  @override
+  State<_DialogEditProfil> createState() => _DialogEditProfilState();
+}
+
+class _DialogEditProfilState extends State<_DialogEditProfil> {
+  final _formKey = GlobalKey<FormState>();
+  late final _namaCtrl = TextEditingController(text: widget.namaAwal);
+  late final _nimCtrl = TextEditingController(text: widget.nimAwal);
+  late final _teleponCtrl = TextEditingController(text: widget.teleponAwal);
+
+  @override
+  void dispose() {
+    _namaCtrl.dispose();
+    _nimCtrl.dispose();
+    _teleponCtrl.dispose();
+    super.dispose();
+  }
+
+  void _simpan() {
+    if (!_formKey.currentState!.validate()) return;
+    Navigator.pop(
+      context,
+      _DataProfil(
+        nama: _namaCtrl.text.trim(),
+        nim: _nimCtrl.text.trim(),
+        telepon: _teleponCtrl.text.trim(),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final mahasiswa = widget.peran == PeranPengguna.mahasiswa;
+    return AlertDialog(
+      title: const Text('Edit Profil'),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: SingleChildScrollView(
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: _namaCtrl,
+                  autofocus: true,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: const InputDecoration(
+                    labelText: 'Nama lengkap',
+                    prefixIcon: Icon(Icons.person_outline),
+                  ),
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? 'Nama lengkap wajib diisi'
+                      : null,
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _nimCtrl,
+                  keyboardType: TextInputType.number,
+                  maxLength: mahasiswa ? 9 : 20,
+                  decoration: InputDecoration(
+                    labelText: mahasiswa ? 'NIM (opsional)' : 'NIP / ID (opsional)',
+                    hintText: mahasiswa ? '9 digit angka' : '5-20 digit angka',
+                    prefixIcon: const Icon(Icons.badge_outlined),
+                    counterText: '',
+                  ),
+                  validator: (v) {
+                    final nilai = v?.trim() ?? '';
+                    if (nilai.isEmpty) return null;
+                    if (!RegExp(r'^[0-9]+$').hasMatch(nilai)) {
+                      return 'NIM / ID hanya boleh berisi angka';
+                    }
+                    if (mahasiswa && nilai.length != 9) {
+                      return 'NIM mahasiswa harus 9 digit angka';
+                    }
+                    if (!mahasiswa && (nilai.length < 5 || nilai.length > 20)) {
+                      return 'NIP / ID harus 5-20 digit';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _teleponCtrl,
+                  keyboardType: TextInputType.phone,
+                  maxLength: 13,
+                  decoration: const InputDecoration(
+                    labelText: 'Nomor HP (opsional)',
+                    hintText: 'Contoh: 081234567890',
+                    prefixIcon: Icon(Icons.phone_outlined),
+                    counterText: '',
+                  ),
+                  validator: (v) {
+                    final nilai = v?.trim() ?? '';
+                    if (nilai.isEmpty) return null;
+                    if (!RegExp(r'^[0-9]+$').hasMatch(nilai)) {
+                      return 'Nomor HP hanya boleh berisi angka';
+                    }
+                    if (nilai.length < 10 || nilai.length > 13) {
+                      return 'Nomor HP tidak valid (10-13 digit)';
+                    }
+                    return null;
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Batal'),
+        ),
+        FilledButton(onPressed: _simpan, child: const Text('Simpan')),
+      ],
     );
   }
 }

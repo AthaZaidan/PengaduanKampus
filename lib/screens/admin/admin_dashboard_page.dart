@@ -7,6 +7,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/sla_chip.dart';
 import '../shared/detail_laporan_page.dart';
 import '../shared/notifikasi_page.dart';
+import 'kelola_lokasi_page.dart';
 
 /// Tata letak dari AlhamSaragih, feature/pembaruan-ui (d63ebe2, 454065a).
 /// Beranda admin fasilitas: antrean kerja (verifikasi, penugasan, SLA).
@@ -68,6 +69,13 @@ class AdminDashboardPage extends StatelessWidget {
         backgroundColor: AppColors.forestGreen,
         foregroundColor: Colors.white,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.location_on_outlined, color: Colors.white),
+            tooltip: 'Kelola Lokasi Kampus',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const KelolaLokasiPage()),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.notifications_outlined, color: Colors.white),
             tooltip: 'Notifikasi',
@@ -183,6 +191,12 @@ class AdminDashboardPage extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 12),
+          _KartuKelolaLokasi(
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const KelolaLokasiPage()),
+            ),
           ),
           const SizedBox(height: 22),
 
@@ -446,6 +460,73 @@ class _BarisAntrian extends StatelessWidget {
                         ),
                         SlaChip(laporan: laporan),
                       ],
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: AppColors.textMuted),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _KartuKelolaLokasi extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _KartuKelolaLokasi({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: EdgeInsets.zero,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppColors.borderSubtle, width: 1),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: AppColors.statusDiverifikasiBg,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.location_on_outlined,
+                  color: AppColors.forestGreen,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Kelola Lokasi Kampus',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13.5,
+                        color: AppColors.deepForest,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Tambah atau hapus pilihan gedung dan ruang laporan.',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                   ],
                 ),

@@ -32,6 +32,38 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
+  static final _polaNim = RegExp(r'^[0-9]{9}$');
+
+  Future<String> _selesaikanEmail(String input) async {
+    final bersih = input.trim();
+    if (!_polaNim.hasMatch(bersih)) return bersih;
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('users')
+          .where('nim', isEqualTo: bersih)
+          .limit(1)
+          .get();
+      final email = snap.docs.firstOrNull?.data()['email']?.toString().trim();
+      if (email != null && email.isNotEmpty) return email;
+    } catch (_) {
+      // Aturan Firestore membatasi baca profil sebelum masuk; gunakan domain kampus.
+    }
+    return '$bersih@students.usu.ac.id';
+  }
+
+  void _snack(String pesan, {bool error = true}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(pesan),
+        backgroundColor: error
+            ? const Color(0xFFB84A4A)
+            : const Color(0xFF406E49),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
   // 1. LOGIKALOGIN MANUAL (Bisa NIM 9 Digit ATAU Email)
   Future<void> _loginManual() async {
     if (!_formKey.currentState!.validate()) return;
@@ -39,17 +71,8 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => _isLoading = true);
 
     try {
-      String input = _identifierController.text.trim();
       final password = _passwordController.text.trim();
-      String emailToAuth = input;
-
-      // Cek apakah input adalah NIM 9 Digit Angka
-      bool isNim = RegExp(r'^[0-9]{9}$').hasMatch(input);
-
-      if (isNim) {
-        // NIM memakai alamat kampus; profil tidak dibuka sebelum autentikasi.
-        emailToAuth = '$input@students.usu.ac.id';
-      }
+      final emailToAuth = await _selesaikanEmail(_identifierController.text);
 
       // Autentikasi ke Firebase Auth
       await FirebaseAuth.instance.signInWithEmailAndPassword(
@@ -60,7 +83,6 @@ class _LoginPageState extends State<LoginPage> {
       if (!mounted) return;
       _navigateToMainShell();
     } on FirebaseAuthException catch (e) {
-      if (!mounted) return;
       String message = 'Login gagal.';
       if (e.code == 'user-not-found' || e.code == 'invalid-credential') {
         message = 'NIM/Email atau Password salah.';
@@ -69,23 +91,38 @@ class _LoginPageState extends State<LoginPage> {
       } else if (e.code == 'invalid-email') {
         message = 'Format NIM/Email tidak valid.';
       }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: const Color(0xFFB84A4A),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      _snack(message);
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: ${e.toString()}'),
-          backgroundColor: const Color(0xFFB84A4A),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      _snack('Error: ${e.toString()}');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _lupaPassword() async {
+    final input = await showDialog<String>(
+      context: context,
+      builder: (_) => _DialogLupaPassword(
+        awal: _identifierController.text.trim(),
+      ),
+    );
+    if (input == null || input.isEmpty) return;
+
+    setState(() => _isLoading = true);
+    try {
+      final email = await _selesaikanEmail(input);
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+      _snack('Tautan reset kata sandi dikirim ke $email.', error: false);
+    } on FirebaseAuthException catch (e) {
+      final pesan = switch (e.code) {
+        'invalid-email' => 'Format NIM/Email tidak valid.',
+        'user-not-found' => 'Akun tidak ditemukan.',
+        'too-many-requests' => 'Terlalu banyak percobaan. Coba lagi nanti.',
+        _ => 'Gagal mengirim tautan reset kata sandi.',
+      };
+      _snack(pesan);
+    } catch (_) {
+      _snack('Gagal mengirim tautan reset kata sandi. Coba lagi nanti.');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -264,7 +301,15 @@ class _LoginPageState extends State<LoginPage> {
                             ? 'Kata sandi wajib diisi'
                             : null,
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 6),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: _isLoading ? null : _lupaPassword,
+                          child: const Text('Lupa kata sandi?'),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
                       FilledButton(
                         onPressed: _isLoading ? null : _loginManual,
                         child: _isLoading
@@ -340,6 +385,86 @@ class _LoginPageState extends State<LoginPage> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _DialogLupaPassword extends StatefulWidget {
+  final String awal;
+
+  const _DialogLupaPassword({required this.awal});
+
+  @override
+  State<_DialogLupaPassword> createState() => _DialogLupaPasswordState();
+}
+
+class _DialogLupaPasswordState extends State<_DialogLupaPassword> {
+  final _formKey = GlobalKey<FormState>();
+  late final _kontrol = TextEditingController(text: widget.awal);
+
+  @override
+  void dispose() {
+    _kontrol.dispose();
+    super.dispose();
+  }
+
+  void _kirim() {
+    if (!_formKey.currentState!.validate()) return;
+    Navigator.pop(context, _kontrol.text.trim());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Reset Kata Sandi'),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Masukkan NIM atau email terdaftar untuk menerima tautan reset kata sandi.',
+                style: TextStyle(fontSize: 13, height: 1.4),
+              ),
+              const SizedBox(height: 14),
+              TextFormField(
+                controller: _kontrol,
+                autofocus: true,
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(
+                  labelText: 'NIM atau email',
+                  hintText: 'Contoh: 241402101 atau email@kampus.ac.id',
+                  prefixIcon: Icon(Icons.email_outlined),
+                ),
+                onFieldSubmitted: (_) => _kirim(),
+                validator: (v) {
+                  final nilai = v?.trim() ?? '';
+                  if (nilai.isEmpty) return 'NIM atau email wajib diisi';
+                  final isNim = RegExp(r'^[0-9]{9}$').hasMatch(nilai);
+                  final isEmail = nilai.contains('@') && nilai.contains('.');
+                  if (!isNim && !isEmail) {
+                    return 'Masukkan NIM 9 digit atau email yang valid';
+                  }
+                  return null;
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Batal'),
+        ),
+        FilledButton(
+          onPressed: _kirim,
+          child: const Text('Kirim Tautan'),
+        ),
+      ],
     );
   }
 }

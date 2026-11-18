@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
 import '../providers/laporan_provider.dart';
@@ -18,6 +21,8 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> {
   static const _durasiMinimal = Duration(milliseconds: 2200);
+  Timer? _timer;
+  Completer<void>? _jeda;
 
   @override
   void initState() {
@@ -25,19 +30,44 @@ class _SplashScreenState extends State<SplashScreen> {
     _lanjut();
   }
 
-  Future<void> _lanjut() async {
-    User? user;
-    try {
-      final jeda = Future<void>.delayed(_durasiMinimal);
-      // Pada web, sesi tersimpan baru tersedia setelah event autentikasi pertama.
-      user = await FirebaseAuth.instance
-          .authStateChanges()
-          .first
-          .timeout(const Duration(seconds: 5));
-      await jeda;
-    } catch (_) {
-      user = FirebaseAuth.instance.currentUser;
+  @override
+  void dispose() {
+    _timer?.cancel();
+    final jeda = _jeda;
+    if (jeda != null && !jeda.isCompleted) {
+      jeda.complete();
     }
+    super.dispose();
+  }
+
+  Future<void> _tungguMinimal() {
+    final completer = Completer<void>();
+    _jeda = completer;
+    _timer = Timer(_durasiMinimal, () {
+      if (!completer.isCompleted) completer.complete();
+    });
+    return completer.future;
+  }
+
+  Future<void> _lanjut() async {
+    final jeda = _tungguMinimal();
+    User? user;
+    if (Firebase.apps.isNotEmpty) {
+      try {
+        // Pada web, sesi tersimpan baru tersedia setelah event autentikasi pertama.
+        user = await FirebaseAuth.instance
+            .authStateChanges()
+            .first
+            .timeout(const Duration(seconds: 5));
+      } catch (_) {
+        try {
+          user = FirebaseAuth.instance.currentUser;
+        } catch (_) {
+          user = null;
+        }
+      }
+    }
+    await jeda;
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
       PageRouteBuilder<void>(
