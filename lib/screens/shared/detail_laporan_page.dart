@@ -11,6 +11,7 @@ import '../../widgets/foto_viewer.dart';
 import '../../widgets/foto_lokal.dart';
 import '../../widgets/komentar_laporan.dart';
 import '../../services/laporan_repository.dart';
+import '../../services/lokasi_service.dart';
 
 class DetailLaporanPage extends StatefulWidget {
   final Laporan laporan;
@@ -573,6 +574,85 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
                   label: 'Lokasi',
                   value: _laporan.lokasi,
                 ),
+                if (_laporan.kodeAset != null && _laporan.kodeAset!.isNotEmpty)
+                  _InfoRow(
+                    icon: Icons.qr_code_2,
+                    label: 'Kode Aset',
+                    value: _laporan.kodeAset!,
+                  ),
+                if (_laporan.latitude != null && _laporan.longitude != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.pin_drop,
+                          size: 15,
+                          color: Colors.grey.shade500,
+                        ),
+                        const SizedBox(width: 8),
+                        SizedBox(
+                          width: 72,
+                          child: Text(
+                            'Titik GPS',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade500,
+                            ),
+                          ),
+                        ),
+                        const Text(
+                          ': ',
+                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                        Expanded(
+                          child: Wrap(
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              Text(
+                                '${_laporan.latitude!.toStringAsFixed(6)}, ${_laporan.longitude!.toStringAsFixed(6)}',
+                                style: const TextStyle(fontSize: 13),
+                              ),
+                              const SizedBox(width: 8),
+                              InkWell(
+                                onTap: () => LokasiService.bukaGoogleMaps(
+                                  _laporan.latitude!,
+                                  _laporan.longitude!,
+                                ),
+                                borderRadius: BorderRadius.circular(4),
+                                child: const Padding(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 4,
+                                    vertical: 2,
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.open_in_new,
+                                        size: 13,
+                                        color: Colors.teal,
+                                      ),
+                                      SizedBox(width: 3),
+                                      Text(
+                                        'Buka Peta',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.teal,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 _InfoRow(
                   icon: Icons.person_outline,
                   label: 'Pelapor',

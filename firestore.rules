@@ -31,11 +31,14 @@ service cloud.firestore {
       function pemilik() { return signedIn() && request.auth.uid == uid && id == 'aktif'; }
       allow read, delete: if pemilik();
       allow create, update: if pemilik() && request.resource.data.keys().hasOnly([
-        'laporanId', 'judul', 'deskripsi', 'lokasi', 'kategori', 'prioritas', 'fotoPaths', 'updatedAt']) &&
+        'laporanId', 'judul', 'deskripsi', 'lokasi', 'kodeAset', 'latitude', 'longitude', 'kategori', 'prioritas', 'fotoPaths', 'updatedAt']) &&
         request.resource.data.laporanId is string && request.resource.data.laporanId.size() <= 100 &&
         request.resource.data.judul is string && request.resource.data.judul.size() <= 150 &&
         request.resource.data.deskripsi is string && request.resource.data.deskripsi.size() <= 5000 &&
         request.resource.data.lokasi is string && request.resource.data.lokasi.size() <= 200 &&
+        (request.resource.data.kodeAset == null || (request.resource.data.kodeAset is string && request.resource.data.kodeAset.size() <= 100)) &&
+        (request.resource.data.latitude == null || request.resource.data.latitude is number) &&
+        (request.resource.data.longitude == null || request.resource.data.longitude is number) &&
         request.resource.data.kategori in ['fasilitas', 'listrik', 'airBersih', 'internet', 'kebersihan', 'lainnya'] &&
         request.resource.data.prioritas in ['rendah', 'sedang', 'tinggi'] &&
         request.resource.data.fotoPaths is list && request.resource.data.fotoPaths.size() <= 3 &&
@@ -68,6 +71,10 @@ service cloud.firestore {
         request.resource.data.createdAt == request.time;
       allow delete: if admin();
       allow update: if false;
+    }
+    match /assets/{id} {
+      allow read: if signedIn();
+      allow write: if admin();
     }
     match /laporan/{id}/komentar/{komentarId} {
       function laporan() { return get(/databases/$(database)/documents/laporan/$(id)).data; }
@@ -126,12 +133,15 @@ service cloud.firestore {
           (paths.size() < 3 || paths[2].matches('laporan/' + owner + '/' + id + '/' + jenis + '/.*'));
       }
       function strukturValid(d) {
-        return d.keys().hasOnly(['judul', 'deskripsi', 'lokasi', 'kategori', 'prioritas', 'pelapor',
+        return d.keys().hasOnly(['judul', 'deskripsi', 'lokasi', 'kodeAset', 'latitude', 'longitude', 'kategori', 'prioritas', 'pelapor',
           'pelaporId', 'tanggalLapor', 'status', 'catatanAdmin', 'teknisiId', 'teknisiNama',
           'fotoPaths', 'fotoSesudahPaths', 'revisi', 'riwayat', 'createdAt', 'updatedAt', 'updatedBy', 'dikonfirmasi']) &&
           d.get('dikonfirmasi', false) is bool && d.judul is string && d.judul.size() > 0 && d.judul.size() <= 150 &&
           d.deskripsi is string && d.deskripsi.size() > 0 && d.deskripsi.size() <= 5000 &&
           d.lokasi is string && d.lokasi.size() > 0 && d.lokasi.size() <= 200 &&
+          (d.kodeAset == null || (d.kodeAset is string && d.kodeAset.size() <= 100)) &&
+          (d.latitude == null || d.latitude is number) &&
+          (d.longitude == null || d.longitude is number) &&
           d.pelapor is string && d.pelaporId is string && d.tanggalLapor is timestamp &&
           d.kategori in ['fasilitas', 'listrik', 'airBersih', 'internet', 'kebersihan', 'lainnya'] &&
           d.prioritas in ['rendah', 'sedang', 'tinggi'] &&

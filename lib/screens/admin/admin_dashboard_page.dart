@@ -7,6 +7,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/sla_chip.dart';
 import '../shared/detail_laporan_page.dart';
 import '../shared/notifikasi_page.dart';
+import 'kelola_aset_page.dart';
 import 'kelola_lokasi_page.dart';
 
 /// Tata letak dari AlhamSaragih, feature/pembaruan-ui (d63ebe2, 454065a).
@@ -69,6 +70,13 @@ class AdminDashboardPage extends StatelessWidget {
         backgroundColor: AppColors.forestGreen,
         foregroundColor: Colors.white,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.qr_code_2, color: Colors.white),
+            tooltip: 'Kelola Aset & QR Code',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const KelolaAsetPage()),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.location_on_outlined, color: Colors.white),
             tooltip: 'Kelola Lokasi Kampus',
@@ -193,6 +201,12 @@ class AdminDashboardPage extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
+          _KartuKelolaAset(
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const KelolaAsetPage()),
+            ),
+          ),
+          const SizedBox(height: 10),
           _KartuKelolaLokasi(
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const KelolaLokasiPage()),
@@ -460,6 +474,73 @@ class _BarisAntrian extends StatelessWidget {
                         ),
                         SlaChip(laporan: laporan),
                       ],
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: AppColors.textMuted),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _KartuKelolaAset extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _KartuKelolaAset({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: EdgeInsets.zero,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppColors.borderSubtle, width: 1),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: AppColors.statusDitugaskanBg,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.qr_code_2,
+                  color: AppColors.statusDitugaskan,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Kelola Aset & QR Code',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13.5,
+                        color: AppColors.deepForest,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Daftarkan inventaris kampus dan buat QR Code untuk pelaporan.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textMuted,
+                      ),
                     ),
                   ],
                 ),

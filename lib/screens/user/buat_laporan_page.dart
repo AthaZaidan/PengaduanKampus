@@ -5,14 +5,18 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../models/app_user.dart';
+import '../../models/aset_kampus.dart';
 import '../../models/laporan.dart';
 import '../../providers/laporan_provider.dart';
+import '../../theme/palet_kampus.dart';
 import '../../widgets/foto_viewer.dart';
 import '../../widgets/foto_lokal.dart';
 import '../../widgets/pilihan_lokasi.dart';
 import '../../services/fitur_laporan_service.dart';
 import '../../services/foto_firestore_service.dart';
 import '../../services/laporan_repository.dart';
+import '../../services/lokasi_service.dart';
+import '../shared/scan_qr_page.dart';
 
 class BuatLaporanPage extends StatefulWidget {
   final LaporanProvider provider;
@@ -46,6 +50,10 @@ class _BuatLaporanPageState extends State<BuatLaporanPage>
 
   KategoriKerusakan _kategori = KategoriKerusakan.fasilitas;
   PrioritasLaporan _prioritas = PrioritasLaporan.sedang;
+  String? _kodeAset;
+  double? _latitude;
+  double? _longitude;
+  bool _mengambilGps = false;
   bool _isLoading = false;
   late String _laporanId = widget.provider.generateId();
 
@@ -86,6 +94,9 @@ class _BuatLaporanPageState extends State<BuatLaporanPage>
         _judulController.text = data['judul'] as String? ?? '';
         _deskripsiController.text = data['deskripsi'] as String? ?? '';
         _lokasiController.text = data['lokasi'] as String? ?? '';
+        _kodeAset = data['kodeAset'] as String?;
+        _latitude = (data['latitude'] as num?)?.toDouble();
+        _longitude = (data['longitude'] as num?)?.toDouble();
         _kategori = KategoriKerusakan.values.byName(data['kategori'] as String);
         _prioritas = PrioritasLaporan.values.byName(
           data['prioritas'] as String,
@@ -121,6 +132,9 @@ class _BuatLaporanPageState extends State<BuatLaporanPage>
       'judul': _judulController.text,
       'deskripsi': _deskripsiController.text,
       'lokasi': _lokasiController.text,
+      'kodeAset': _kodeAset,
+      'latitude': _latitude,
+      'longitude': _longitude,
       'kategori': _kategori.name,
       'prioritas': _prioritas.name,
       'fotoPaths': List<String>.of(_fotoPaths),
@@ -270,6 +284,72 @@ class _BuatLaporanPageState extends State<BuatLaporanPage>
     );
   }
 
+  Future<void> _scanQrAset() async {
+    if (_memuatDraf || _drafGagal || _isLoading) return;
+    final hasil = await Navigator.of(context).push<AsetKampus>(
+      MaterialPageRoute(
+        builder: (_) => const ScanQrPage(),
+      ),
+    );
+    if (!mounted || hasil == null) return;
+
+    setState(() {
+      _kodeAset = hasil.kode;
+      _lokasiController.text = hasil.lokasi;
+      if (_judulController.text.trim().isEmpty) {
+        _judulController.text = 'Kerusakan ${hasil.nama}';
+      }
+      _kategori = hasil.kategori;
+    });
+    _jadwalkanDraf();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Aset terdeteksi: ${hasil.nama} (${hasil.kode})'),
+        backgroundColor: AppColors.forestGreen,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  Future<void> _ambilGps() async {
+    if (_memuatDraf || _drafGagal || _isLoading || _mengambilGps) return;
+    setState(() => _mengambilGps = true);
+
+    try {
+      final hasil = await LokasiService.ambilKoordinatSaatIni();
+      if (!mounted) return;
+      setState(() {
+        _latitude = hasil.latitude;
+        _longitude = hasil.longitude;
+      });
+      _jadwalkanDraf();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Koordinat GPS berhasil ditandai: ${hasil.teksKoordinat}',
+          ),
+          backgroundColor: AppColors.forestGreen,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            e is StateError ? e.message : 'Gagal mengambil koordinat GPS.',
+          ),
+          backgroundColor: const Color(0xFFB84A4A),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _mengambilGps = false);
+    }
+  }
+
   Future<void> _buangDraf() async {
     final yakin = await showDialog<bool>(
       context: context,
@@ -305,6 +385,9 @@ class _BuatLaporanPageState extends State<BuatLaporanPage>
         _laporanId = widget.provider.generateId();
         _kategori = KategoriKerusakan.fasilitas;
         _prioritas = PrioritasLaporan.sedang;
+        _kodeAset = null;
+        _latitude = null;
+        _longitude = null;
         _pesanDraf = 'Draf dihapus. Anda dapat membuat laporan baru.';
       });
     } catch (e) {
@@ -331,6 +414,9 @@ class _BuatLaporanPageState extends State<BuatLaporanPage>
       judul: _judulController.text.trim(),
       deskripsi: _deskripsiController.text.trim(),
       lokasi: _lokasiController.text.trim(),
+      kodeAset: _kodeAset,
+      latitude: _latitude,
+      longitude: _longitude,
       kategori: _kategori,
       prioritas: _prioritas,
       pelapor: widget.user.nama,
@@ -503,7 +589,181 @@ class _BuatLaporanPageState extends State<BuatLaporanPage>
                 const SizedBox(height: 16),
 
                 // Lokasi
-                _buildSectionLabel('Lokasi *'),
+                Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: [
+                    _buildSectionLabel('Lokasi *'),
+                    Wrap(
+                      spacing: 4,
+                      children: [
+                        TextButton.icon(
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppColors.statusDitugaskan,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 4,
+                            ),
+                          ),
+                          onPressed: _mengambilGps ? null : _ambilGps,
+                          icon: _mengambilGps
+                              ? const SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.my_location, size: 16),
+                          label: const Text('Tandai GPS'),
+                        ),
+                        TextButton.icon(
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppColors.forestGreen,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 4,
+                            ),
+                          ),
+                          onPressed: _scanQrAset,
+                          icon: const Icon(Icons.qr_code_scanner, size: 16),
+                          label: const Text('Scan QR'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                if (_kodeAset != null && _kodeAset!.isNotEmpty) ...[
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.statusDiverifikasiBg,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: AppColors.sageGreen.withValues(alpha: 0.5),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.qr_code_2,
+                          size: 22,
+                          color: AppColors.forestGreen,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Aset Terhubung',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.forestGreen,
+                                ),
+                              ),
+                              Text(
+                                _kodeAset!,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: 'Lepas Kode Aset',
+                          icon: const Icon(Icons.close, size: 18, color: Colors.grey),
+                          onPressed: () {
+                            setState(() => _kodeAset = null);
+                            _jadwalkanDraf();
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                if (_latitude != null && _longitude != null) ...[
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.statusDitugaskanBg,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: AppColors.mutedTeal.withValues(alpha: 0.5),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.pin_drop,
+                          size: 22,
+                          color: AppColors.statusDitugaskan,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Koordinat GPS Tersemat',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.statusDitugaskan,
+                                ),
+                              ),
+                              Text(
+                                '${_latitude!.toStringAsFixed(6)}, ${_longitude!.toStringAsFixed(6)}',
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: 'Buka di Maps',
+                          icon: const Icon(
+                            Icons.open_in_new,
+                            size: 18,
+                            color: AppColors.statusDitugaskan,
+                          ),
+                          onPressed: () => LokasiService.bukaGoogleMaps(
+                            _latitude!,
+                            _longitude!,
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: 'Hapus Titik GPS',
+                          icon: const Icon(Icons.close, size: 18, color: Colors.grey),
+                          onPressed: () {
+                            setState(() {
+                              _latitude = null;
+                              _longitude = null;
+                            });
+                            _jadwalkanDraf();
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 if (widget.provider.menggunakanFirebase)
                   PilihanLokasi(
                     onPilih: (nama) => _lokasiController.text = nama,

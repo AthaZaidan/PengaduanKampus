@@ -38,6 +38,11 @@ class Laporan {
   final String judul;
   final String deskripsi;
   final String lokasi;
+  /// Kode unik aset fasilitas kampus dari pemindaian QR code (opsional).
+  final String? kodeAset;
+  /// Titik koordinat GPS opsional saat laporan dibuat.
+  final double? latitude;
+  final double? longitude;
   bool dikonfirmasi;
   final KategoriKerusakan kategori;
   final PrioritasLaporan prioritas;
@@ -72,6 +77,9 @@ class Laporan {
     required this.judul,
     required this.deskripsi,
     required this.lokasi,
+    this.kodeAset,
+    this.latitude,
+    this.longitude,
     this.dikonfirmasi = false,
     required this.kategori,
     required this.prioritas,
@@ -110,6 +118,9 @@ class Laporan {
     'judul': judul,
     'deskripsi': deskripsi,
     'lokasi': lokasi,
+    'kodeAset': kodeAset,
+    'latitude': latitude,
+    'longitude': longitude,
     'dikonfirmasi': dikonfirmasi,
     'kategori': kategori.name,
     'prioritas': prioritas.name,
@@ -142,6 +153,9 @@ class Laporan {
       judul: data['judul'] as String,
       deskripsi: data['deskripsi'] as String,
       lokasi: data['lokasi'] as String,
+      kodeAset: data['kodeAset'] as String?,
+      latitude: (data['latitude'] as num?)?.toDouble(),
+      longitude: (data['longitude'] as num?)?.toDouble(),
       dikonfirmasi: data['dikonfirmasi'] as bool? ?? false,
       kategori: KategoriKerusakan.values.byName(data['kategori'] as String),
       prioritas: PrioritasLaporan.values.byName(data['prioritas'] as String),

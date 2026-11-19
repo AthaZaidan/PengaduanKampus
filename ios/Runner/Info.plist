@@ -70,5 +70,7 @@
 	<string>Aplikasi memerlukan kamera untuk mengambil foto bukti kerusakan.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Aplikasi memerlukan akses galeri untuk melampirkan foto bukti kerusakan.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Aplikasi memerlukan izin lokasi untuk menandai titik koordinat kerusakan fasilitas kampus.</string>
 </dict>
 </plist>
