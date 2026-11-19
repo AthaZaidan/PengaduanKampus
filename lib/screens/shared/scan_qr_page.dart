@@ -55,51 +55,13 @@ class _ScanQrPageState extends State<ScanQrPage> {
     }
   }
 
-  void _bukaInputManual() {
-    final manualController = TextEditingController();
-    showDialog(
+  Future<void> _bukaInputManual() async {
+    final val = await showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Input Kode Aset Manual'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Masukkan kode aset yang tertera pada stiker fisik (contoh: AST-2-3-PROYEKTOR-01):',
-              style: TextStyle(fontSize: 13),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: manualController,
-              autofocus: true,
-              textCapitalization: TextCapitalization.characters,
-              decoration: const InputDecoration(
-                hintText: 'Kode aset...',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.qr_code),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Batal'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final val = manualController.text.trim();
-              if (val.isNotEmpty) {
-                Navigator.of(ctx).pop();
-                _prosesKode(val);
-              }
-            },
-            child: const Text('Gunakan'),
-          ),
-        ],
-      ),
+      builder: (_) => const _DialogInputKodeManual(),
     );
+    if (!mounted || val == null || val.isEmpty) return;
+    _prosesKode(val);
   }
 
   @override
@@ -302,4 +264,64 @@ class _QrCornerPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _DialogInputKodeManual extends StatefulWidget {
+  const _DialogInputKodeManual();
+
+  @override
+  State<_DialogInputKodeManual> createState() => _DialogInputKodeManualState();
+}
+
+class _DialogInputKodeManualState extends State<_DialogInputKodeManual> {
+  final _manualController = TextEditingController();
+
+  @override
+  void dispose() {
+    _manualController.dispose();
+    super.dispose();
+  }
+
+  void _gunakan() {
+    final val = _manualController.text.trim();
+    if (val.isNotEmpty) {
+      Navigator.of(context).pop(val);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Input Kode Aset Manual'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Masukkan kode aset yang tertera pada stiker fisik (contoh: AST-2-3-PROYEKTOR-01):',
+            style: TextStyle(fontSize: 13),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _manualController,
+            autofocus: true,
+            textCapitalization: TextCapitalization.characters,
+            onSubmitted: (_) => _gunakan(),
+            decoration: const InputDecoration(
+              hintText: 'Kode aset...',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.qr_code),
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Batal'),
+        ),
+        FilledButton(onPressed: _gunakan, child: const Text('Gunakan')),
+      ],
+    );
+  }
 }

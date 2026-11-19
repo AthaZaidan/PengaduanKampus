@@ -9,9 +9,13 @@ Aplikasi berbasis Flutter untuk sistem pelaporan dan pengaduan kerusakan fasilit
   - Registrasi akun pelapor (**Mahasiswa**, **Dosen**, **Staf**) beserta validasi NIM/NIP, email, dan nomor HP.
   - Masuk menggunakan **NIM 9 digit** atau **Email** dan kata sandi, **Masuk dengan Google** (`google_sign_in`), serta fitur **Lupa kata sandi** (kirim tautan reset via email).
 - **Akses Berbasis Peran (`MainShell`)**:
-  - **Pelapor (Mahasiswa / Dosen / Staf)**: Beranda ringkasan status, pembuatan laporan dengan form tervalidasi, draf otomatis di Firestore, lampiran foto opsional, daftar & pencarian laporan, statistik pribadi, konfirmasi hasil perbaikan atau permintaan pemeriksaan ulang.
-  - **Teknisi**: Daftar tugas yang ditugaskan admin, pembaruan progres pengerjaan (`Ditugaskan` → `Dikerjakan` → `Selesai`) beserta catatan dan foto bukti sesudah penanganan, serta statistik kinerja.
-  - **Admin Fasilitas**: Dashboard antrean kerja & SLA, verifikasi/penolakan laporan, penugasan dan penggantian teknisi, manajemen daftar lokasi kampus (`KelolaLokasiPage`), manajemen akun teknisi (tambah & hapus teknisi dengan pengecekan tugas aktif), dan statistik menyeluruh.
+  - **Pelapor (Mahasiswa / Dosen / Staf)**: Beranda ringkasan status, pembuatan laporan dengan form tervalidasi, pemindaian QR Code aset & penandaan koordinat GPS (`ScanQrPage`, `LokasiService`), draf otomatis di Firestore, lampiran foto opsional, daftar & pencarian laporan, statistik pribadi, konfirmasi hasil perbaikan atau permintaan pemeriksaan ulang.
+  - **Teknisi**: Daftar tugas yang ditugaskan admin, pembaruan progres pengerjaan (`Ditugaskan` → `Dikerjakan` → `Selesai`) beserta catatan dan foto bukti sesudah penanganan, akses koordinat GPS ke Google Maps, serta statistik kinerja.
+  - **Admin Fasilitas**: Dashboard antrean kerja & SLA, verifikasi/penolakan laporan, penugasan dan penggantian teknisi, manajemen inventaris aset & generator QR Code (`KelolaAsetPage`), manajemen daftar lokasi kampus (`KelolaLokasiPage`), manajemen akun teknisi (tambah & hapus teknisi dengan pengecekan tugas aktif), dan statistik menyeluruh.
+- **Scan QR Aset Kampus & Koordinat GPS**:
+  - Pemindaian stiker QR aset kampus via kamera maupun input manual (`ScanQrPage`, `mobile_scanner`) yang otomatis mengisi kode aset, lokasi, kategori, dan judul laporan dari koleksi Firestore `assets/{kode}` atau parser pola/JSON (`AsetKampus`).
+  - Admin dapat mendaftarkan aset baru dan membuat QR Code siap cetak/salin lewat `KelolaAsetPage` (`qr_flutter`).
+  - Pelapor dapat menyematkan titik koordinat GPS (`geolocator`) yang langsung dapat dibuka di Google Maps dari detail laporan (`LokasiService`, `url_launcher`).
 - **Lampiran Foto Terkompresi & Draf Otomatis**:
   - Foto sebelum/sesudah penanganan (maksimal 3 foto per jenis) dikompres, divalidasi ukuran/formatnya (`FotoFirestoreService`), dan disimpan sebagai Base64 pada subkoleksi Firestore `laporan/{id}/foto/{fotoId}`.
   - Draf formulir disimpan otomatis ke `users/{uid}/draf/aktif` dan foto draf disimpan sementara di penyimpanan perangkat (`FotoLokalService`).
@@ -60,19 +64,22 @@ lib/
 ├── firebase_options.dart
 ├── models/
 │   ├── app_user.dart              Model pengguna & peran (mahasiswa, dosen, staf, teknisi, admin)
+│   ├── aset_kampus.dart           Model aset fasilitas kampus & parser QR Code
 │   ├── filter_laporan.dart        Filter kategori, prioritas, rentang tanggal, & pengurutan
-│   ├── laporan.dart               Model laporan, status, kategori, prioritas, SLA, & riwayat
+│   ├── laporan.dart               Model laporan, status, kategori, prioritas, SLA, kode aset, & GPS
 │   └── statistik_laporan.dart     Agregasi statistik dan tren 7 hari terakhir
 ├── providers/
 │   └── laporan_provider.dart      State management & alur transisi status laporan
 ├── services/
 │   ├── akun_service.dart          Pembuatan & penghapusan akun teknisi oleh admin
+│   ├── aset_service.dart          Layanan master aset kampus & pencarian QR di Firestore
 │   ├── fitur_laporan_service.dart Draf, status baca notifikasi, lokasi, & komentar laporan
 │   ├── foto_firestore_service.dart Validasi & penyimpanan foto Base64 di Firestore
 │   ├── foto_lokal_native.dart     Penyimpanan foto draf lokal (Android/iOS/Desktop)
 │   ├── foto_lokal_service.dart    Export bersyarat penyimpanan foto lokal
 │   ├── foto_lokal_web.dart        Penyimpanan foto draf lokal (Web)
-│   └── laporan_repository.dart    Sinkronisasi & transaksi Firestore untuk laporan
+│   ├── laporan_repository.dart    Sinkronisasi & transaksi Firestore untuk laporan
+│   └── lokasi_service.dart        Pengambilan koordinat GPS & tautan Google Maps
 ├── theme/
 │   ├── app_theme.dart             Konfigurasi tema aplikasi
 │   ├── palet_kampus.dart          Palet warna utama (AppColors)
@@ -104,15 +111,17 @@ lib/
     │   └── teknisi_kinerja_page.dart Statistik kinerja teknisi
     ├── admin/
     │   ├── admin_shell.dart       Navigasi admin fasilitas
-    │   ├── admin_dashboard_page.dart Dashboard antrean, SLA, & akses lokasi
+    │   ├── admin_dashboard_page.dart Dashboard antrean, SLA, akses aset, & akses lokasi
     │   ├── admin_laporan_page.dart Daftar semua laporan lintas status
+    │   ├── kelola_aset_page.dart  Manajemen inventaris aset kampus & generator QR Code
     │   ├── kelola_lokasi_page.dart Manajemen pilihan lokasi kampus
     │   ├── kelola_teknisi_page.dart Daftar teknisi, reset password, & hapus teknisi
     │   └── tambah_teknisi_page.dart Form tambah akun teknisi baru
     └── shared/
         ├── kerangka_navigasi.dart Kerangka navigasi bawah seragam
-        ├── detail_laporan_page.dart Detail laporan, aksi per peran, timeline, & klarifikasi
+        ├── detail_laporan_page.dart Detail laporan, aksi per peran, QR aset, GPS, timeline, & klarifikasi
         ├── riwayat_page.dart      Daftar laporan bertab dengan pencarian & filter
+        ├── scan_qr_page.dart      Pemindai QR Code aset kampus & input kode manual
         ├── statistik_page.dart    Halaman visualisasi statistik laporan
         ├── notifikasi_page.dart   Daftar notifikasi perubahan status & komentar baru
         └── profile_page.dart      Profil akun, ringkasan, edit profil, & keluar akun

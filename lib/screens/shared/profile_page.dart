@@ -8,6 +8,7 @@ import '../../widgets/identitas_kampus.dart';
 import '../../models/laporan.dart';
 import '../../providers/laporan_provider.dart';
 import '../authentication/login_page.dart';
+import '../admin/kelola_aset_page.dart';
 import '../admin/kelola_lokasi_page.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -438,6 +439,14 @@ class _ProfilePageState extends State<ProfilePage> {
           child: Column(
             children: [
               if (widget.user.peran.isAdmin) ...[
+                _MenuTile(
+                  ikon: Icons.qr_code_2,
+                  judul: 'Kelola aset & QR kampus',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const KelolaAsetPage()),
+                  ),
+                ),
+                const Divider(height: 1, indent: 56),
                 _MenuTile(
                   ikon: Icons.location_on_outlined,
                   judul: 'Kelola lokasi kampus',

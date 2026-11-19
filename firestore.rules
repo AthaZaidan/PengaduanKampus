@@ -36,9 +36,9 @@ service cloud.firestore {
         request.resource.data.judul is string && request.resource.data.judul.size() <= 150 &&
         request.resource.data.deskripsi is string && request.resource.data.deskripsi.size() <= 5000 &&
         request.resource.data.lokasi is string && request.resource.data.lokasi.size() <= 200 &&
-        (request.resource.data.kodeAset == null || (request.resource.data.kodeAset is string && request.resource.data.kodeAset.size() <= 100)) &&
-        (request.resource.data.latitude == null || request.resource.data.latitude is number) &&
-        (request.resource.data.longitude == null || request.resource.data.longitude is number) &&
+        (request.resource.data.get('kodeAset', null) == null || (request.resource.data.kodeAset is string && request.resource.data.kodeAset.size() <= 100)) &&
+        (request.resource.data.get('latitude', null) == null || request.resource.data.latitude is number) &&
+        (request.resource.data.get('longitude', null) == null || request.resource.data.longitude is number) &&
         request.resource.data.kategori in ['fasilitas', 'listrik', 'airBersih', 'internet', 'kebersihan', 'lainnya'] &&
         request.resource.data.prioritas in ['rendah', 'sedang', 'tinggi'] &&
         request.resource.data.fotoPaths is list && request.resource.data.fotoPaths.size() <= 3 &&
@@ -74,7 +74,10 @@ service cloud.firestore {
     }
     match /assets/{id} {
       allow read: if signedIn();
-      allow write: if admin();
+      allow create, update: if admin() &&
+        request.resource.data.nama is string && request.resource.data.nama.size() > 0 &&
+        request.resource.data.lokasi is string && request.resource.data.lokasi.size() > 0;
+      allow delete: if admin();
     }
     match /laporan/{id}/komentar/{komentarId} {
       function laporan() { return get(/databases/$(database)/documents/laporan/$(id)).data; }
@@ -139,9 +142,9 @@ service cloud.firestore {
           d.get('dikonfirmasi', false) is bool && d.judul is string && d.judul.size() > 0 && d.judul.size() <= 150 &&
           d.deskripsi is string && d.deskripsi.size() > 0 && d.deskripsi.size() <= 5000 &&
           d.lokasi is string && d.lokasi.size() > 0 && d.lokasi.size() <= 200 &&
-          (d.kodeAset == null || (d.kodeAset is string && d.kodeAset.size() <= 100)) &&
-          (d.latitude == null || d.latitude is number) &&
-          (d.longitude == null || d.longitude is number) &&
+          (d.get('kodeAset', null) == null || (d.kodeAset is string && d.kodeAset.size() <= 100)) &&
+          (d.get('latitude', null) == null || d.latitude is number) &&
+          (d.get('longitude', null) == null || d.longitude is number) &&
           d.pelapor is string && d.pelaporId is string && d.tanggalLapor is timestamp &&
           d.kategori in ['fasilitas', 'listrik', 'airBersih', 'internet', 'kebersihan', 'lainnya'] &&
           d.prioritas in ['rendah', 'sedang', 'tinggi'] &&

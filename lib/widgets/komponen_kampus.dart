@@ -239,6 +239,26 @@ class KartuLaporan extends StatelessWidget {
                       color: laporan.prioritas.color,
                     ),
                   ),
+                  if (laporan.kodeAset != null && laporan.kodeAset!.isNotEmpty)
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.qr_code_2,
+                          size: 14,
+                          color: scheme.primary,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          laporan.kodeAset!,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: scheme.primary,
+                          ),
+                        ),
+                      ],
+                    ),
                   if (laporan.jumlahFoto > 0)
                     Row(
                       mainAxisSize: MainAxisSize.min,

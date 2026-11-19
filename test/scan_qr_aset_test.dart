@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pengaduan_kampus/models/aset_kampus.dart';
+import 'package:pengaduan_kampus/models/filter_laporan.dart';
 import 'package:pengaduan_kampus/models/laporan.dart';
 import 'package:pengaduan_kampus/screens/shared/scan_qr_page.dart';
 import 'package:pengaduan_kampus/services/lokasi_service.dart';
@@ -70,6 +71,49 @@ void main() {
         gps.googleMapsUrl,
         'https://www.google.com/maps/search/?api=1&query=-6.2,106.816666',
       );
+    });
+
+    test('JSON QR mendeteksi kategori eksplisit maupun otomatis dari nama', () {
+      const jsonEksplisit =
+          '{"kode": "AST-01", "nama": "Perangkat Kampus", "lokasi": "Gedung A", "kategori": "internet"}';
+      expect(
+        AsetKampus.dariKodeMentah(jsonEksplisit).kategori,
+        KategoriKerusakan.internet,
+      );
+
+      const jsonOtomatis =
+          '{"kode": "AST-02", "nama": "Lampu Koridor", "lokasi": "Gedung B"}';
+      expect(
+        AsetKampus.dariKodeMentah(jsonOtomatis).kategori,
+        KategoriKerusakan.listrik,
+      );
+    });
+
+    test('FilterLaporan dapat mencari laporan berdasarkan kodeAset', () {
+      final l1 = Laporan(
+        id: 'lap-1',
+        judul: 'Proyektor mati',
+        deskripsi: 'Tidak menyala',
+        lokasi: 'Gedung 2',
+        kodeAset: 'AST-2-3-PROYEKTOR-01',
+        kategori: KategoriKerusakan.fasilitas,
+        prioritas: PrioritasLaporan.sedang,
+        pelapor: 'Budi',
+        tanggalLapor: DateTime(2026, 11, 18),
+      );
+      final l2 = Laporan(
+        id: 'lap-2',
+        judul: 'Kran bocor',
+        deskripsi: 'Air menetes',
+        lokasi: 'Gedung 1',
+        kategori: KategoriKerusakan.airBersih,
+        prioritas: PrioritasLaporan.rendah,
+        pelapor: 'Sari',
+        tanggalLapor: DateTime(2026, 11, 18),
+      );
+
+      final hasil = const FilterLaporan().terapkan([l1, l2], 'proyektor-01');
+      expect(hasil.map((l) => l.id), ['lap-1']);
     });
   });
 

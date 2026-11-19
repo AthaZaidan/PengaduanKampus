@@ -63,12 +63,23 @@ class AsetKampus {
     if (clean.startsWith('{') && clean.endsWith('}')) {
       try {
         final Map<String, dynamic> json = jsonDecode(clean);
+        final nama = (json['nama'] as String?) ?? 'Aset Kampus';
+        KategoriKerusakan kategori = _tebakKategori(nama);
+        final katStr = json['kategori'] as String?;
+        if (katStr != null) {
+          try {
+            kategori = KategoriKerusakan.values.byName(katStr);
+          } catch (_) {
+            kategori = _tebakKategori(nama);
+          }
+        }
         return AsetKampus(
           kode: (json['kode'] as String?) ?? clean,
-          nama: (json['nama'] as String?) ?? 'Aset Kampus',
+          nama: nama,
           lokasi: (json['lokasi'] as String?) ?? 'Kampus',
           gedung: json['gedung'] as String?,
           ruangan: json['ruangan'] as String?,
+          kategori: kategori,
           deskripsi: json['deskripsi'] as String?,
         );
       } catch (_) {

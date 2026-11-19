@@ -173,245 +173,20 @@ class _KelolaAsetPageState extends State<KelolaAsetPage> {
   }
 
   Future<void> _bukaFormTambahAset() async {
-    final formKey = GlobalKey<FormState>();
-    final kodeCtrl = TextEditingController();
-    final namaCtrl = TextEditingController();
-    final lokasiCtrl = TextEditingController();
-    final deskripsiCtrl = TextEditingController();
-    KategoriKerusakan kategori = KategoriKerusakan.fasilitas;
-    bool menyimpan = false;
-
-    await showModalBottomSheet<void>(
+    final asetBaru = await showModalBottomSheet<AsetKampus>(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setModalState) {
-          return Padding(
-            padding: EdgeInsets.only(
-              left: 20,
-              right: 20,
-              top: 20,
-              bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-            ),
-            child: SingleChildScrollView(
-              child: Form(
-                key: formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Daftarkan Aset Baru',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.deepForest,
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.close),
-                          onPressed: () => Navigator.of(ctx).pop(),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Kode Aset
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: kodeCtrl,
-                            textCapitalization: TextCapitalization.characters,
-                            decoration: const InputDecoration(
-                              labelText: 'Kode Aset *',
-                              hintText: 'Contoh: AST-2-3-PROYEKTOR-01',
-                              prefixIcon: Icon(Icons.qr_code_2),
-                              border: OutlineInputBorder(),
-                            ),
-                            validator: (v) {
-                              if (v == null || v.trim().isEmpty) {
-                                return 'Kode aset tidak boleh kosong';
-                              }
-                              if (v.trim().length < 3) {
-                                return 'Minimal 3 karakter';
-                              }
-                              return null;
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        IconButton.filledTonal(
-                          tooltip: 'Buat Kode Otomatis',
-                          icon: const Icon(Icons.auto_awesome),
-                          onPressed: () {
-                            final acak = DateTime.now().millisecondsSinceEpoch % 1000;
-                            setModalState(() {
-                              kodeCtrl.text = 'AST-GD-RUANG-$acak';
-                            });
-                          },
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Nama Aset
-                    TextFormField(
-                      controller: namaCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Nama Aset *',
-                        hintText: 'Contoh: Proyektor Epson EB-X400',
-                        prefixIcon: Icon(Icons.devices_other),
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (v) {
-                        if (v == null || v.trim().isEmpty) {
-                          return 'Nama aset tidak boleh kosong';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Kategori Kerusakan
-                    DropdownButtonFormField<KategoriKerusakan>(
-                      initialValue: kategori,
-                      decoration: const InputDecoration(
-                        labelText: 'Kategori Fasilitas',
-                        prefixIcon: Icon(Icons.category_outlined),
-                        border: OutlineInputBorder(),
-                      ),
-                      items: KategoriKerusakan.values.map((k) {
-                        return DropdownMenuItem(
-                          value: k,
-                          child: Row(
-                            children: [
-                              Icon(k.icon, size: 18),
-                              const SizedBox(width: 8),
-                              Text(k.label),
-                            ],
-                          ),
-                        );
-                      }).toList(),
-                      onChanged: (k) {
-                        if (k != null) setModalState(() => kategori = k);
-                      },
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Lokasi Aset
-                    PilihanLokasi(
-                      onPilih: (pilihan) {
-                        setModalState(() => lokasiCtrl.text = pilihan);
-                      },
-                    ),
-                    const SizedBox(height: 6),
-                    TextFormField(
-                      controller: lokasiCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Lokasi Lengkap *',
-                        hintText: 'Gedung — Lantai — Ruang',
-                        prefixIcon: Icon(Icons.location_on_outlined),
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (v) {
-                        if (v == null || v.trim().isEmpty) {
-                          return 'Lokasi tidak boleh kosong';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Deskripsi (opsional)
-                    TextFormField(
-                      controller: deskripsiCtrl,
-                      maxLines: 2,
-                      decoration: const InputDecoration(
-                        labelText: 'Catatan / Spesifikasi (opsional)',
-                        hintText: 'Keterangan tambahan barang...',
-                        prefixIcon: Icon(Icons.notes),
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Tombol Simpan
-                    SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: FilledButton.icon(
-                        style: FilledButton.styleFrom(
-                          backgroundColor: AppColors.forestGreen,
-                        ),
-                        onPressed: menyimpan
-                            ? null
-                            : () async {
-                                if (!formKey.currentState!.validate()) return;
-                                setModalState(() => menyimpan = true);
-
-                                final asetBaru = AsetKampus(
-                                  kode: kodeCtrl.text.trim().toUpperCase(),
-                                  nama: namaCtrl.text.trim(),
-                                  lokasi: lokasiCtrl.text.trim(),
-                                  kategori: kategori,
-                                  deskripsi: deskripsiCtrl.text.trim().isEmpty
-                                      ? null
-                                      : deskripsiCtrl.text.trim(),
-                                );
-
-                                try {
-                                  await _service.simpanAset(asetBaru);
-                                  if (!context.mounted) return;
-                                  Navigator.of(ctx).pop();
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        'Aset ${asetBaru.nama} berhasil didaftarkan!',
-                                      ),
-                                      backgroundColor: AppColors.forestGreen,
-                                      behavior: SnackBarBehavior.floating,
-                                    ),
-                                  );
-                                } catch (e) {
-                                  if (!context.mounted) return;
-                                  setModalState(() => menyimpan = false);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(pesanGalatFirebase(e)),
-                                      backgroundColor: AppColors.statusDitolak,
-                                      behavior: SnackBarBehavior.floating,
-                                    ),
-                                  );
-                                }
-                              },
-                        icon: menyimpan
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : const Icon(Icons.check),
-                        label: Text(
-                          menyimpan ? 'Menyimpan...' : 'Simpan & Buat QR',
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
+      builder: (_) => _SheetTambahAset(service: _service),
+    );
+    if (!mounted || asetBaru == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Aset ${asetBaru.nama} berhasil didaftarkan!'),
+        backgroundColor: AppColors.forestGreen,
+        behavior: SnackBarBehavior.floating,
       ),
     );
   }
@@ -742,6 +517,252 @@ class _KelolaAsetPageState extends State<KelolaAsetPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _SheetTambahAset extends StatefulWidget {
+  final AsetService service;
+
+  const _SheetTambahAset({required this.service});
+
+  @override
+  State<_SheetTambahAset> createState() => _SheetTambahAsetState();
+}
+
+class _SheetTambahAsetState extends State<_SheetTambahAset> {
+  final _formKey = GlobalKey<FormState>();
+  final _kodeCtrl = TextEditingController();
+  final _namaCtrl = TextEditingController();
+  final _lokasiCtrl = TextEditingController();
+  final _deskripsiCtrl = TextEditingController();
+  KategoriKerusakan _kategori = KategoriKerusakan.fasilitas;
+  bool _menyimpan = false;
+
+  @override
+  void dispose() {
+    _kodeCtrl.dispose();
+    _namaCtrl.dispose();
+    _lokasiCtrl.dispose();
+    _deskripsiCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _simpan() async {
+    if (_menyimpan || !_formKey.currentState!.validate()) return;
+    setState(() => _menyimpan = true);
+
+    final asetBaru = AsetKampus(
+      kode: _kodeCtrl.text.trim().toUpperCase(),
+      nama: _namaCtrl.text.trim(),
+      lokasi: _lokasiCtrl.text.trim(),
+      kategori: _kategori,
+      deskripsi: _deskripsiCtrl.text.trim().isEmpty
+          ? null
+          : _deskripsiCtrl.text.trim(),
+    );
+
+    try {
+      await widget.service.simpanAset(asetBaru);
+      if (!mounted) return;
+      Navigator.of(context).pop(asetBaru);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _menyimpan = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(pesanGalatFirebase(e)),
+          backgroundColor: AppColors.statusDitolak,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: 20,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+      ),
+      child: SingleChildScrollView(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Daftarkan Aset Baru',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.deepForest,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+
+              // Kode Aset
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _kodeCtrl,
+                      textCapitalization: TextCapitalization.characters,
+                      decoration: const InputDecoration(
+                        labelText: 'Kode Aset *',
+                        hintText: 'Contoh: AST-2-3-PROYEKTOR-01',
+                        prefixIcon: Icon(Icons.qr_code_2),
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) {
+                          return 'Kode aset tidak boleh kosong';
+                        }
+                        if (v.trim().length < 3) {
+                          return 'Minimal 3 karakter';
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton.filledTonal(
+                    tooltip: 'Buat Kode Otomatis',
+                    icon: const Icon(Icons.auto_awesome),
+                    onPressed: () {
+                      final acak =
+                          DateTime.now().millisecondsSinceEpoch % 1000;
+                      setState(() {
+                        _kodeCtrl.text = 'AST-GD-RUANG-$acak';
+                      });
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+
+              // Nama Aset
+              TextFormField(
+                controller: _namaCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Nama Aset *',
+                  hintText: 'Contoh: Proyektor Epson EB-X400',
+                  prefixIcon: Icon(Icons.devices_other),
+                  border: OutlineInputBorder(),
+                ),
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) {
+                    return 'Nama aset tidak boleh kosong';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
+
+              // Kategori Kerusakan
+              DropdownButtonFormField<KategoriKerusakan>(
+                initialValue: _kategori,
+                decoration: const InputDecoration(
+                  labelText: 'Kategori Fasilitas',
+                  prefixIcon: Icon(Icons.category_outlined),
+                  border: OutlineInputBorder(),
+                ),
+                items: KategoriKerusakan.values.map((k) {
+                  return DropdownMenuItem(
+                    value: k,
+                    child: Row(
+                      children: [
+                        Icon(k.icon, size: 18),
+                        const SizedBox(width: 8),
+                        Text(k.label),
+                      ],
+                    ),
+                  );
+                }).toList(),
+                onChanged: (k) {
+                  if (k != null) setState(() => _kategori = k);
+                },
+              ),
+              const SizedBox(height: 12),
+
+              // Lokasi Aset
+              PilihanLokasi(
+                onPilih: (pilihan) {
+                  setState(() => _lokasiCtrl.text = pilihan);
+                },
+              ),
+              const SizedBox(height: 6),
+              TextFormField(
+                controller: _lokasiCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Lokasi Lengkap *',
+                  hintText: 'Gedung — Lantai — Ruang',
+                  prefixIcon: Icon(Icons.location_on_outlined),
+                  border: OutlineInputBorder(),
+                ),
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) {
+                    return 'Lokasi tidak boleh kosong';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
+
+              // Deskripsi (opsional)
+              TextFormField(
+                controller: _deskripsiCtrl,
+                maxLines: 2,
+                decoration: const InputDecoration(
+                  labelText: 'Catatan / Spesifikasi (opsional)',
+                  hintText: 'Keterangan tambahan barang...',
+                  prefixIcon: Icon(Icons.notes),
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Tombol Simpan
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.forestGreen,
+                  ),
+                  onPressed: _menyimpan ? null : _simpan,
+                  icon: _menyimpan
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.check),
+                  label: Text(
+                    _menyimpan ? 'Menyimpan...' : 'Simpan & Buat QR',
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

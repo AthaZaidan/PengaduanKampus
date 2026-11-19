@@ -9,11 +9,22 @@ class PilihanLokasi extends StatefulWidget {
 }
 
 class _PilihanLokasiState extends State<PilihanLokasi> {
-  late final _stream = FirebaseFirestore.instance
-      .collection('lokasi')
-      .orderBy('nama')
-      .limit(200)
-      .snapshots();
+  late final Stream<QuerySnapshot<Map<String, dynamic>>> _stream =
+      _buatStream();
+
+  Stream<QuerySnapshot<Map<String, dynamic>>> _buatStream() {
+    try {
+      return FirebaseFirestore.instance
+          .collection('lokasi')
+          .orderBy('nama')
+          .limit(200)
+          .snapshots();
+    } catch (_) {
+      // Aman saat dijalankan di widget test tanpa inisialisasi Firebase.
+      return const Stream.empty();
+    }
+  }
+
   @override
   Widget build(BuildContext context) =>
       StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(

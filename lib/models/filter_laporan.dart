@@ -38,6 +38,7 @@ class FilterLaporan {
                     l.judul,
                     l.lokasi,
                     l.id,
+                    if (l.kodeAset != null) l.kodeAset!,
                   ].any((s) => s.toLowerCase().contains(q))),
         )
         .toList();
