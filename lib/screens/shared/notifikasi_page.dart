@@ -3,12 +3,11 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
-import '../../services/fitur_laporan_service.dart';
-import '../../services/laporan_repository.dart';
-
 import '../../models/app_user.dart';
 import '../../models/laporan.dart';
 import '../../providers/laporan_provider.dart';
+import '../../services/fitur_laporan_service.dart';
+import '../../services/laporan_repository.dart';
 import 'detail_laporan_page.dart';
 
 /// Daftar pemberitahuan perubahan status laporan (diambil dari timeline).
@@ -25,12 +24,18 @@ class NotifikasiPage extends StatefulWidget {
 class _NotifikasiPageState extends State<NotifikasiPage> {
   LaporanProvider get provider => widget.provider;
   AppUser get user => widget.user;
+
   Set<String> _dibaca = {};
+  Set<String> _dihapus = {};
+  bool _modePilih = false;
+  final Set<String> _terpilih = {};
+
   StreamSubscription<Set<String>>? _subscription;
-  final _komentarSubs =
-      <String, StreamSubscription<QuerySnapshot<Map<String, dynamic>>>>{};
-  final _komentar =
-      <String, List<QueryDocumentSnapshot<Map<String, dynamic>>>>{};
+  StreamSubscription<Set<String>>? _dihapusSubscription;
+  final Map<String, StreamSubscription<QuerySnapshot<Map<String, dynamic>>>>
+      _komentarSubs = {};
+  final Map<String, List<QueryDocumentSnapshot<Map<String, dynamic>>>>
+      _komentar = {};
   bool _komentarGagal = false;
 
   void _pantauKomentar() {
@@ -68,7 +73,8 @@ class _NotifikasiPageState extends State<NotifikasiPage> {
     provider.addListener(_pantauKomentar);
     _pantauKomentar();
     if (provider.menggunakanFirebase) {
-      _subscription = FiturLaporanService(user.uid).dibaca().listen(
+      final service = FiturLaporanService(user.uid);
+      _subscription = service.dibaca().listen(
         (ids) {
           if (mounted) setState(() => _dibaca = ids);
         },
@@ -80,6 +86,18 @@ class _NotifikasiPageState extends State<NotifikasiPage> {
           }
         },
       );
+      _dihapusSubscription = service.dihapus().listen(
+        (ids) {
+          if (mounted) {
+            setState(() {
+              _dihapus = ids;
+              _terpilih.removeWhere(ids.contains);
+              if (_terpilih.isEmpty) _modePilih = false;
+            });
+          }
+        },
+        onError: (_) {},
+      );
     }
   }
 
@@ -90,11 +108,13 @@ class _NotifikasiPageState extends State<NotifikasiPage> {
       sub.cancel();
     }
     _subscription?.cancel();
+    _dihapusSubscription?.cancel();
     super.dispose();
   }
 
   Future<void> _tandai(Iterable<String> ids) async {
     final daftar = ids.toList();
+    if (daftar.isEmpty) return;
     try {
       if (provider.menggunakanFirebase) {
         await FiturLaporanService(user.uid).tandaiDibaca(daftar);
@@ -102,8 +122,85 @@ class _NotifikasiPageState extends State<NotifikasiPage> {
       if (mounted) setState(() => _dibaca.addAll(daftar));
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(pesanGalatFirebase(e))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(pesanGalatFirebase(e))),
+        );
+      }
+    }
+  }
+
+  void _togglePilih(String id) {
+    setState(() {
+      if (_terpilih.contains(id)) {
+        _terpilih.remove(id);
+        if (_terpilih.isEmpty) _modePilih = false;
+      } else {
+        _terpilih.add(id);
+      }
+    });
+  }
+
+  void _keluarModePilih() {
+    setState(() {
+      _modePilih = false;
+      _terpilih.clear();
+    });
+  }
+
+  Future<void> _hapusNotif({
+    required List<String> targetIds,
+    required bool semua,
+  }) async {
+    if (targetIds.isEmpty) return;
+
+    final konfirmasi = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(semua ? 'Hapus semua notifikasi?' : 'Hapus notifikasi?'),
+        content: Text(
+          semua
+              ? 'Semua notifikasi (${targetIds.length}) akan dihapus dari daftar Anda.'
+              : '${targetIds.length} notifikasi terpilih akan dihapus dari daftar Anda.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+
+    if (konfirmasi != true) return;
+
+    try {
+      if (provider.menggunakanFirebase) {
+        await FiturLaporanService(user.uid).hapusNotifikasi(targetIds);
+      }
+      if (!mounted) return;
+      setState(() {
+        _dihapus.addAll(targetIds);
+        _terpilih.removeAll(targetIds);
+        if (_terpilih.isEmpty) _modePilih = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            semua
+                ? 'Semua notifikasi dihapus.'
+                : '${targetIds.length} notifikasi dihapus.',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(pesanGalatFirebase(e))),
+        );
       }
     }
   }
@@ -117,17 +214,23 @@ class _NotifikasiPageState extends State<NotifikasiPage> {
         i < laporan.riwayat.length;
         i++
       ) {
-        hasil.add(_Notif(laporan, laporan.riwayat[i], '${laporan.id}_$i'));
+        final id = '${laporan.id}_$i';
+        if (_dihapus.contains(id)) continue;
+        hasil.add(_Notif(laporan, laporan.riwayat[i], id));
       }
     }
     for (final laporan in provider.untuk(user)) {
-      for (final doc
-          in _komentar[laporan.id] ??
-              <QueryDocumentSnapshot<Map<String, dynamic>>>[]) {
+      final docs =
+          _komentar[laporan.id] ??
+          const <QueryDocumentSnapshot<Map<String, dynamic>>>[];
+      for (final doc in docs) {
         final data = doc.data();
+        if (data == null) continue;
         if (data['uid'] == user.uid) continue;
         final waktu = data['createdAt'];
         if (waktu is! Timestamp) continue;
+        final id = 'komentar_${laporan.id}_${doc.id}';
+        if (_dihapus.contains(id)) continue;
         hasil.add(
           _Notif(
             laporan,
@@ -137,7 +240,7 @@ class _NotifikasiPageState extends State<NotifikasiPage> {
               oleh: data['nama'] as String? ?? 'Pengguna',
               catatan: data['teks'] as String?,
             ),
-            'komentar_${laporan.id}_${doc.id}',
+            id,
             komentar: true,
           ),
         );
@@ -158,97 +261,183 @@ class _NotifikasiPageState extends State<NotifikasiPage> {
   Widget _buildContent(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final daftar = _kumpulkan();
+    final semuaTerpilih =
+        daftar.isNotEmpty && _terpilih.length == daftar.length;
 
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: const Text(
-          'Notifikasi',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        actions: [
-          PopupMenuButton<String>(
-            tooltip: 'Opsi notifikasi',
-            onSelected: (v) {
-              if (v == 'baca') {
-                _tandai(daftar.map((n) => n.id));
-              }
-            },
-            itemBuilder: (_) => [
-              const PopupMenuItem(
-                value: 'baca',
-                child: Text('Tandai semua dibaca'),
-              ),
-            ],
+    return PopScope(
+      canPop: !_modePilih,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && _modePilih) {
+          _keluarModePilih();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        appBar: AppBar(
+          leading: _modePilih
+              ? IconButton(
+                  icon: const Icon(Icons.close),
+                  tooltip: 'Batal pilih',
+                  onPressed: _keluarModePilih,
+                )
+              : null,
+          title: Text(
+            _modePilih ? '${_terpilih.length} dipilih' : 'Notifikasi',
+            style: const TextStyle(fontWeight: FontWeight.bold),
           ),
-        ],
-        backgroundColor: scheme.surface,
-        foregroundColor: scheme.onSurface,
-      ),
-      bottomNavigationBar: _komentarGagal
-          ? const SafeArea(
-              child: Padding(
-                padding: EdgeInsets.all(12),
-                child: Text(
-                  'Komentar notifikasi belum dapat dimuat. Buka ulang halaman untuk mencoba lagi.',
+          actions: _modePilih
+              ? [
+                  TextButton(
+                    onPressed: daftar.isEmpty
+                        ? null
+                        : () {
+                            setState(() {
+                              if (semuaTerpilih) {
+                                _terpilih.clear();
+                                _modePilih = false;
+                              } else {
+                                _terpilih
+                                  ..clear()
+                                  ..addAll(daftar.map((n) => n.id));
+                              }
+                            });
+                          },
+                    child: Text(semuaTerpilih ? 'Batal semua' : 'Pilih semua'),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline),
+                    tooltip: 'Hapus terpilih',
+                    onPressed: _terpilih.isEmpty
+                        ? null
+                        : () => _hapusNotif(
+                            targetIds: _terpilih.toList(),
+                            semua: false,
+                          ),
+                  ),
+                ]
+              : [
+                  if (daftar.isNotEmpty)
+                    IconButton(
+                      icon: const Icon(Icons.checklist),
+                      tooltip: 'Pilih notifikasi',
+                      onPressed: () => setState(() => _modePilih = true),
+                    ),
+                  PopupMenuButton<String>(
+                    tooltip: 'Opsi notifikasi',
+                    onSelected: (v) {
+                      if (v == 'baca') {
+                        _tandai(daftar.map((n) => n.id));
+                      } else if (v == 'pilih') {
+                        setState(() => _modePilih = true);
+                      } else if (v == 'hapus_semua' && daftar.isNotEmpty) {
+                        _hapusNotif(
+                          targetIds: daftar.map((n) => n.id).toList(),
+                          semua: true,
+                        );
+                      }
+                    },
+                    itemBuilder: (_) => [
+                      PopupMenuItem(
+                        value: 'baca',
+                        enabled: daftar.isNotEmpty,
+                        child: const Text('Tandai semua dibaca'),
+                      ),
+                      PopupMenuItem(
+                        value: 'pilih',
+                        enabled: daftar.isNotEmpty,
+                        child: const Text('Pilih notifikasi'),
+                      ),
+                      PopupMenuItem(
+                        value: 'hapus_semua',
+                        enabled: daftar.isNotEmpty,
+                        child: const Text('Hapus semua notifikasi'),
+                      ),
+                    ],
+                  ),
+                ],
+          backgroundColor: scheme.surface,
+          foregroundColor: scheme.onSurface,
+        ),
+        bottomNavigationBar: _komentarGagal
+            ? const SafeArea(
+                child: Padding(
+                  padding: EdgeInsets.all(12),
+                  child: Text(
+                    'Komentar notifikasi belum dapat dimuat. Buka ulang halaman untuk mencoba lagi.',
+                  ),
                 ),
-              ),
-            )
-          : null,
-      body: daftar.isEmpty
-          ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.notifications_none,
-                      size: 64,
-                      color: Colors.grey.shade400,
-                    ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'Belum ada notifikasi',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+              )
+            : null,
+        body: daftar.isEmpty
+            ? Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.notifications_none,
+                        size: 64,
+                        color: Colors.grey.shade400,
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Perubahan status laporan akan muncul di sini.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.grey.shade600,
-                        fontSize: 13,
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Belum ada notifikasi',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 4),
+                      Text(
+                        'Perubahan status laporan akan muncul di sini.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            )
-          : ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: daftar.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 10),
-              itemBuilder: (context, i) => _NotifTile(
-                notif: daftar[i],
-                dibaca: _dibaca.contains(daftar[i].id),
-                onTap: () {
-                  _tandai([daftar[i].id]);
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => DetailLaporanPage(
-                        laporan: daftar[i].laporan,
-                        provider: provider,
-                        user: user,
-                      ),
-                    ),
+              )
+            : ListView.separated(
+                padding: const EdgeInsets.all(16),
+                itemCount: daftar.length,
+                separatorBuilder: (_, _) => const SizedBox(height: 10),
+                itemBuilder: (context, i) {
+                  final item = daftar[i];
+                  return _NotifTile(
+                    notif: item,
+                    dibaca: _dibaca.contains(item.id),
+                    modePilih: _modePilih,
+                    terpilih: _terpilih.contains(item.id),
+                    onLongPress: () {
+                      setState(() {
+                        _modePilih = true;
+                        _terpilih.add(item.id);
+                      });
+                    },
+                    onTap: () {
+                      if (_modePilih) {
+                        _togglePilih(item.id);
+                        return;
+                      }
+                      _tandai([item.id]);
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => DetailLaporanPage(
+                            laporan: item.laporan,
+                            provider: provider,
+                            user: user,
+                          ),
+                        ),
+                      );
+                    },
                   );
                 },
               ),
-            ),
+      ),
     );
   }
 }
@@ -265,12 +454,18 @@ class _Notif {
 class _NotifTile extends StatelessWidget {
   final _Notif notif;
   final bool dibaca;
+  final bool modePilih;
+  final bool terpilih;
   final VoidCallback onTap;
+  final VoidCallback onLongPress;
 
   const _NotifTile({
     required this.notif,
     required this.onTap,
+    required this.onLongPress,
     required this.dibaca,
+    this.modePilih = false,
+    this.terpilih = false,
   });
 
   static String _waktuRelatif(DateTime t) {
@@ -286,25 +481,38 @@ class _NotifTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final status = notif.entri.status;
     final catatan = notif.entri.catatan;
+    final scheme = Theme.of(context).colorScheme;
 
     return Card(
-      color: dibaca
-          ? Theme.of(context).colorScheme.surface
-          : Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
+      color: terpilih
+          ? scheme.primary.withValues(alpha: 0.12)
+          : dibaca
+              ? scheme.surface
+              : scheme.primary.withValues(alpha: 0.05),
       elevation: 0,
       margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+        side: BorderSide(
+          color: terpilih ? scheme.primary : scheme.outlineVariant,
+        ),
       ),
       child: InkWell(
         onTap: onTap,
+        onLongPress: onLongPress,
         borderRadius: BorderRadius.circular(14),
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (modePilih) ...[
+                Checkbox(
+                  value: terpilih,
+                  onChanged: (_) => onTap(),
+                ),
+                const SizedBox(width: 4),
+              ],
               CircleAvatar(
                 radius: 20,
                 backgroundColor: status.color.withValues(alpha: 0.15),
@@ -372,7 +580,8 @@ class _NotifTile extends StatelessWidget {
                   ],
                 ),
               ),
-              Icon(Icons.chevron_right, color: Colors.grey.shade400),
+              if (!modePilih)
+                Icon(Icons.chevron_right, color: Colors.grey.shade400),
             ],
           ),
         ),

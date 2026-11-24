@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../models/aset_kampus.dart';
+import '../../models/laporan.dart';
 import '../../services/aset_service.dart';
 import '../../theme/palet_kampus.dart';
 
@@ -45,13 +46,189 @@ class _ScanQrPageState extends State<ScanQrPage> {
       _memuat = true;
     });
 
+    AsetKampus aset;
     try {
-      final aset = await _asetService.cariAset(kodeMentah);
-      if (!mounted) return;
-      Navigator.of(context).pop(aset);
+      aset = await _asetService.cariAset(kodeMentah);
     } catch (_) {
-      if (!mounted) return;
-      Navigator.of(context).pop(AsetKampus.dariKodeMentah(kodeMentah));
+      aset = AsetKampus.dariKodeMentah(kodeMentah);
+    }
+
+    if (!mounted) return;
+    setState(() => _memuat = false);
+
+    final foto = aset.fotoBytes;
+    final gunakan = await showModalBottomSheet<bool>(
+      context: context,
+      isDismissible: false,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 14),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceContainerHigh,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        aset.kode,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.deepForest,
+                        ),
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.statusDiverifikasiBg,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            aset.kategori.icon,
+                            size: 13,
+                            color: AppColors.forestGreen,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            aset.kategori.label,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.forestGreen,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  aset.nama,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.location_on_outlined,
+                      size: 16,
+                      color: AppColors.textMuted,
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        aset.lokasi,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                if (aset.deskripsi != null && aset.deskripsi!.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    aset.deskripsi!,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontStyle: FontStyle.italic,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                ],
+                if (foto != null) ...[
+                  const SizedBox(height: 14),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
+                    child: Image.memory(
+                      foto,
+                      height: 180,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onPressed: () => Navigator.of(ctx).pop(false),
+                        child: const Text('Scan Ulang'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: FilledButton(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.forestGreen,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onPressed: () => Navigator.of(ctx).pop(true),
+                        child: const Text('Gunakan Aset'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    if (!mounted) return;
+    if (gunakan == true) {
+      Navigator.of(context).pop(aset);
+    } else {
+      setState(() => _sudahScan = false);
     }
   }
 
@@ -102,7 +279,7 @@ class _ScanQrPageState extends State<ScanQrPage> {
           MobileScanner(
             controller: _controller,
             onDetect: (capture) {
-              if (_sudahScan) return;
+              if (_sudahScan || _memuat) return;
               final barcode = capture.barcodes.firstOrNull;
               final code = barcode?.rawValue;
               if (code != null && code.trim().isNotEmpty) {

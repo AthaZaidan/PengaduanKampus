@@ -1,8 +1,12 @@
+import 'dart:async';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/app_user.dart';
 import '../../models/laporan.dart';
 import '../../providers/laporan_provider.dart';
+import '../../services/fitur_laporan_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/sla_chip.dart';
 import '../shared/detail_laporan_page.dart';
@@ -11,7 +15,7 @@ import 'buat_laporan_page.dart';
 
 /// Tata letak dari AlhamSaragih, branch feature/pembaruan-ui (d63ebe2, 454065a).
 /// Palet hijau Alham dipakai bersama integrasi Firebase/foto lokal.
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   final LaporanProvider provider;
   final AppUser user;
   final VoidCallback onLihatLaporan;
@@ -22,6 +26,19 @@ class HomePage extends StatelessWidget {
     required this.user,
     required this.onLihatLaporan,
   });
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  LaporanProvider get provider => widget.provider;
+  AppUser get user => widget.user;
+
+  Set<String> _dibaca = {};
+  StreamSubscription<Set<String>>? _dibacaSub;
+  final Map<String, StreamSubscription<QuerySnapshot>> _komentarSubs = {};
+  final Map<String, List<QueryDocumentSnapshot>> _komentar = {};
 
   static String _inisial(String nama) {
     final kata = nama
@@ -35,6 +52,110 @@ class HomePage extends StatelessWidget {
   }
 
   @override
+  void initState() {
+    super.initState();
+    provider.addListener(_pantauKomentar);
+    _pantauKomentar();
+    if (provider.menggunakanFirebase) {
+      _dibacaSub = FiturLaporanService(user.uid).dibaca().listen(
+        (ids) {
+          if (mounted) setState(() => _dibaca = ids);
+        },
+        onError: (_) {},
+      );
+    }
+  }
+
+  void _pantauKomentar() {
+    if (!provider.menggunakanFirebase) return;
+    final ids = provider.untuk(user).map((l) => l.id).toSet();
+    for (final id in _komentarSubs.keys.toList()) {
+      if (!ids.contains(id)) {
+        _komentarSubs.remove(id)?.cancel();
+        _komentar.remove(id);
+      }
+    }
+    for (final id in ids) {
+      _komentarSubs.putIfAbsent(
+        id,
+        () => FirebaseFirestore.instance
+            .collection('laporan/$id/komentar')
+            .orderBy('createdAt')
+            .limitToLast(10)
+            .snapshots()
+            .listen(
+              (s) {
+                if (mounted) setState(() => _komentar[id] = s.docs);
+              },
+              onError: (_) {},
+            ),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    provider.removeListener(_pantauKomentar);
+    for (final sub in _komentarSubs.values) {
+      sub.cancel();
+    }
+    _dibacaSub?.cancel();
+    super.dispose();
+  }
+
+  bool _adaNotifBelumDibaca(List<Laporan> daftarLaporan) {
+    if (!provider.menggunakanFirebase) return false;
+    for (final laporan in daftarLaporan) {
+      final startIdx = user.peran.isAdmin ? 0 : 1;
+      for (var i = startIdx; i < laporan.riwayat.length; i++) {
+        if (!_dibaca.contains('${laporan.id}_$i')) {
+          return true;
+        }
+      }
+      final docs =
+          _komentar[laporan.id] ?? const <QueryDocumentSnapshot>[];
+      for (final doc in docs) {
+        final rawData = doc.data();
+        if (rawData is! Map<String, dynamic>) continue;
+        if (rawData['uid'] == user.uid) continue;
+        if (!_dibaca.contains('komentar_${laporan.id}_${doc.id}')) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  Widget _bangunIkonLonceng(bool adaBelumDibaca) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        const Icon(
+          Icons.notifications_outlined,
+          color: Colors.white,
+        ),
+        if (adaBelumDibaca)
+          Positioned(
+            top: -1,
+            right: -1,
+            child: Container(
+              width: 9,
+              height: 9,
+              decoration: BoxDecoration(
+                color: const Color(0xFFD94343),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: AppColors.forestGreen,
+                  width: 1.5,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: provider,
@@ -44,6 +165,7 @@ class HomePage extends StatelessWidget {
 
   Widget _buildContent(BuildContext context) {
     final laporanList = provider.untuk(user);
+    final adaNotifBaru = _adaNotifBelumDibaca(laporanList);
     int hitung(Set<StatusLaporan> s) =>
         laporanList.where((l) => s.contains(l.status)).length;
     final menunggu = hitung({
@@ -178,10 +300,7 @@ class HomePage extends StatelessWidget {
             ),
             actions: [
               IconButton(
-                icon: const Icon(
-                  Icons.notifications_outlined,
-                  color: Colors.white,
-                ),
+                icon: _bangunIkonLonceng(adaNotifBaru),
                 tooltip: 'Notifikasi',
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute(
@@ -269,7 +388,7 @@ class HomePage extends StatelessWidget {
                           icon: Icons.search,
                           label: 'Cari Laporan',
                           color: AppColors.mutedTeal,
-                          onTap: onLihatLaporan,
+                          onTap: widget.onLihatLaporan,
                         ),
                       ),
                     ],
@@ -293,7 +412,7 @@ class HomePage extends StatelessWidget {
                         ),
                       ),
                       TextButton(
-                        onPressed: onLihatLaporan,
+                        onPressed: widget.onLihatLaporan,
                         style: TextButton.styleFrom(
                           foregroundColor: AppColors.forestGreen,
                         ),
@@ -659,6 +778,7 @@ class _LaporanCard extends StatelessWidget {
   String _formatTanggal(DateTime date) {
     final now = DateTime.now();
     final diff = now.difference(date);
+    if (diff.isNegative) return 'Baru saja';
     if (diff.inDays > 0) return '${diff.inDays} hari lalu';
     if (diff.inHours > 0) return '${diff.inHours} jam lalu';
     return '${diff.inMinutes} menit lalu';

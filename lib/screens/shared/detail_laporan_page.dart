@@ -726,7 +726,7 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
             if (_laporan.jumlahFoto > 0) ...[
               const SizedBox(height: 12),
               _FotoCard(
-                judul: 'Foto Sebelum',
+                judul: 'Foto Kerusakan',
                 foto: _laporan.foto,
                 paths: _laporan.fotoPaths,
                 onTap: (i) => _bukaFoto(_laporan.foto, _laporan.fotoPaths, i),
@@ -737,7 +737,7 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
             if (_laporan.jumlahFotoSesudah > 0) ...[
               const SizedBox(height: 12),
               _FotoCard(
-                judul: 'Foto Sesudah',
+                judul: 'Foto Sesudah Perbaikan',
                 foto: _laporan.fotoSesudah,
                 paths: _laporan.fotoSesudahPaths,
                 onTap: (i) => _bukaFoto(

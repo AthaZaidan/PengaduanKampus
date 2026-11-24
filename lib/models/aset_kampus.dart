@@ -1,7 +1,7 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'laporan.dart';
 
-/// Model master aset fasilitas kampus untuk pelaporan berbasis QR Code.
 class AsetKampus {
   final String kode;
   final String nama;
@@ -10,6 +10,7 @@ class AsetKampus {
   final String? ruangan;
   final KategoriKerusakan kategori;
   final String? deskripsi;
+  final String? fotoBase64;
 
   const AsetKampus({
     required this.kode,
@@ -19,9 +20,19 @@ class AsetKampus {
     this.ruangan,
     this.kategori = KategoriKerusakan.fasilitas,
     this.deskripsi,
+    this.fotoBase64,
   });
 
-  /// Konversi dari dokumen Firestore `assets/{kode}`.
+  Uint8List? get fotoBytes {
+    final raw = fotoBase64;
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      return base64Decode(raw);
+    } catch (_) {
+      return null;
+    }
+  }
+
   factory AsetKampus.fromFirestore(String id, Map<String, dynamic> data) {
     KategoriKerusakan kat = KategoriKerusakan.fasilitas;
     final katStr = data['kategori'] as String?;
@@ -41,6 +52,7 @@ class AsetKampus {
       ruangan: data['ruangan'] as String?,
       kategori: kat,
       deskripsi: data['deskripsi'] as String?,
+      fotoBase64: data['fotoBase64'] as String?,
     );
   }
 
@@ -52,6 +64,7 @@ class AsetKampus {
     'ruangan': ruangan,
     'kategori': kategori.name,
     'deskripsi': deskripsi,
+    'fotoBase64': fotoBase64,
   };
 
   /// Parser cerdas untuk membaca kode QR mentah (offline/fallback jika belum di Firestore).

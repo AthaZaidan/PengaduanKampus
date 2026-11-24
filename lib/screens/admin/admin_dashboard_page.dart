@@ -1,8 +1,12 @@
+import 'dart:async';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/app_user.dart';
 import '../../models/laporan.dart';
 import '../../providers/laporan_provider.dart';
+import '../../services/fitur_laporan_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/sla_chip.dart';
 import '../shared/detail_laporan_page.dart';
@@ -12,7 +16,7 @@ import 'kelola_lokasi_page.dart';
 
 /// Tata letak dari AlhamSaragih, feature/pembaruan-ui (d63ebe2, 454065a).
 /// Beranda admin fasilitas: antrean kerja (verifikasi, penugasan, SLA).
-class AdminDashboardPage extends StatelessWidget {
+class AdminDashboardPage extends StatefulWidget {
   final LaporanProvider provider;
   final AppUser user;
 
@@ -27,6 +31,122 @@ class AdminDashboardPage extends StatelessWidget {
   });
 
   @override
+  State<AdminDashboardPage> createState() => _AdminDashboardPageState();
+}
+
+class _AdminDashboardPageState extends State<AdminDashboardPage> {
+  LaporanProvider get provider => widget.provider;
+  AppUser get user => widget.user;
+
+  Set<String> _dibaca = {};
+  StreamSubscription<Set<String>>? _dibacaSub;
+  final _komentarSubs =
+      <String, StreamSubscription<QuerySnapshot>>{};
+  final _komentar =
+      <String, List<QueryDocumentSnapshot>>{};
+
+  @override
+  void initState() {
+    super.initState();
+    provider.addListener(_pantauKomentar);
+    _pantauKomentar();
+    if (provider.menggunakanFirebase) {
+      _dibacaSub = FiturLaporanService(user.uid).dibaca().listen(
+        (ids) {
+          if (mounted) setState(() => _dibaca = ids);
+        },
+        onError: (_) {},
+      );
+    }
+  }
+
+  void _pantauKomentar() {
+    if (!provider.menggunakanFirebase) return;
+    final ids = provider.untuk(user).map((l) => l.id).toSet();
+    for (final id in _komentarSubs.keys.toList()) {
+      if (!ids.contains(id)) {
+        _komentarSubs.remove(id)?.cancel();
+        _komentar.remove(id);
+      }
+    }
+    for (final id in ids) {
+      _komentarSubs.putIfAbsent(
+        id,
+        () => FirebaseFirestore.instance
+            .collection('laporan/$id/komentar')
+            .orderBy('createdAt')
+            .limitToLast(10)
+            .snapshots()
+            .listen(
+              (s) {
+                if (mounted) setState(() => _komentar[id] = s.docs);
+              },
+              onError: (_) {},
+            ),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    provider.removeListener(_pantauKomentar);
+    for (final sub in _komentarSubs.values) {
+      sub.cancel();
+    }
+    _dibacaSub?.cancel();
+    super.dispose();
+  }
+
+  bool _adaNotifBelumDibaca(List<Laporan> daftarLaporan) {
+    for (final laporan in daftarLaporan) {
+      final startIdx = user.peran.isAdmin ? 0 : 1;
+      for (var i = startIdx; i < laporan.riwayat.length; i++) {
+        if (!_dibaca.contains('${laporan.id}_$i')) {
+          return true;
+        }
+      }
+      final docs =
+          _komentar[laporan.id] ??
+          const <QueryDocumentSnapshot>[];
+      for (final doc in docs) {
+        final rawData = doc.data();
+if (rawData is! Map<String, dynamic>) continue;
+if (rawData['uid'] == user.uid) continue;
+if (!_dibaca.contains('komentar_${laporan.id}_${doc.id}')) {
+  return true;
+}
+      }
+    }
+    return false;
+  }
+
+  Widget _bangunIkonLonceng(bool adaBelumDibaca) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        const Icon(Icons.notifications_outlined, color: Colors.white),
+        if (adaBelumDibaca)
+          Positioned(
+            top: -1,
+            right: -1,
+            child: Container(
+              width: 9,
+              height: 9,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE53935),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: AppColors.forestGreen,
+                  width: 1.5,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: provider,
@@ -36,6 +156,7 @@ class AdminDashboardPage extends StatelessWidget {
 
   Widget _buildContent(BuildContext context) {
     final semua = provider.untuk(user);
+    final adaNotifBaru = _adaNotifBelumDibaca(semua);
 
     int hitung(StatusLaporan s) => semua.where((l) => l.status == s).length;
     final perluVerifikasi = hitung(StatusLaporan.menunggu);
@@ -85,7 +206,7 @@ class AdminDashboardPage extends StatelessWidget {
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.notifications_outlined, color: Colors.white),
+            icon: _bangunIkonLonceng(adaNotifBaru),
             tooltip: 'Notifikasi',
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute(
@@ -230,7 +351,7 @@ class AdminDashboardPage extends StatelessWidget {
                 ),
               ),
               TextButton(
-                onPressed: onLihatSemua,
+                onPressed: widget.onLihatSemua,
                 style: TextButton.styleFrom(
                   foregroundColor: AppColors.forestGreen,
                 ),

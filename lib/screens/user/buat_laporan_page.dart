@@ -1,5 +1,5 @@
-import 'dart:typed_data';
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -8,14 +8,13 @@ import '../../models/app_user.dart';
 import '../../models/aset_kampus.dart';
 import '../../models/laporan.dart';
 import '../../providers/laporan_provider.dart';
-import '../../theme/palet_kampus.dart';
-import '../../widgets/foto_viewer.dart';
-import '../../widgets/foto_lokal.dart';
-import '../../widgets/pilihan_lokasi.dart';
 import '../../services/fitur_laporan_service.dart';
 import '../../services/foto_firestore_service.dart';
 import '../../services/laporan_repository.dart';
-import '../../services/lokasi_service.dart';
+import '../../theme/palet_kampus.dart';
+import '../../widgets/foto_lokal.dart';
+import '../../widgets/foto_viewer.dart';
+import '../../widgets/pilihan_lokasi.dart';
 import '../shared/scan_qr_page.dart';
 
 class BuatLaporanPage extends StatefulWidget {
@@ -50,10 +49,8 @@ class _BuatLaporanPageState extends State<BuatLaporanPage>
 
   KategoriKerusakan _kategori = KategoriKerusakan.fasilitas;
   PrioritasLaporan _prioritas = PrioritasLaporan.sedang;
+  AsetKampus? _asetTerhubung;
   String? _kodeAset;
-  double? _latitude;
-  double? _longitude;
-  bool _mengambilGps = false;
   bool _isLoading = false;
   late String _laporanId = widget.provider.generateId();
 
@@ -95,8 +92,6 @@ class _BuatLaporanPageState extends State<BuatLaporanPage>
         _deskripsiController.text = data['deskripsi'] as String? ?? '';
         _lokasiController.text = data['lokasi'] as String? ?? '';
         _kodeAset = data['kodeAset'] as String?;
-        _latitude = (data['latitude'] as num?)?.toDouble();
-        _longitude = (data['longitude'] as num?)?.toDouble();
         _kategori = KategoriKerusakan.values.byName(data['kategori'] as String);
         _prioritas = PrioritasLaporan.values.byName(
           data['prioritas'] as String,
@@ -106,7 +101,8 @@ class _BuatLaporanPageState extends State<BuatLaporanPage>
       }
     } catch (_) {
       _drafGagal = true;
-      _pesanDraf = 'Draf belum dapat dimuat. Coba buka form kembali sebelum membuat laporan baru.';
+      _pesanDraf =
+          'Draf belum dapat dimuat. Coba buka form kembali sebelum membuat laporan baru.';
     } finally {
       if (mounted) setState(() => _memuatDraf = false);
     }
@@ -133,8 +129,6 @@ class _BuatLaporanPageState extends State<BuatLaporanPage>
       'deskripsi': _deskripsiController.text,
       'lokasi': _lokasiController.text,
       'kodeAset': _kodeAset,
-      'latitude': _latitude,
-      'longitude': _longitude,
       'kategori': _kategori.name,
       'prioritas': _prioritas.name,
       'fotoPaths': List<String>.of(_fotoPaths),
@@ -145,7 +139,8 @@ class _BuatLaporanPageState extends State<BuatLaporanPage>
           .then((_) {
             if (mounted && versi == _versiDraf && !_terkirim) {
               setState(
-                () => _pesanDraf = 'Draf tersimpan otomatis. Foto dikirim ke Firebase saat laporan dikirim.',
+                () => _pesanDraf =
+                    'Draf tersimpan otomatis. Foto dikirim ke Firebase saat laporan dikirim.',
               );
             }
           })
@@ -253,7 +248,7 @@ class _BuatLaporanPageState extends State<BuatLaporanPage>
             error is StateError || _draf != null
                 ? pesanGalatFirebase(error)
                 : 'Gagal mengambil foto. Periksa izin kamera/galeri.',
-            style: TextStyle(color: Colors.white),
+            style: const TextStyle(color: Colors.white),
           ),
         ),
       );
@@ -294,6 +289,7 @@ class _BuatLaporanPageState extends State<BuatLaporanPage>
     if (!mounted || hasil == null) return;
 
     setState(() {
+      _asetTerhubung = hasil;
       _kodeAset = hasil.kode;
       _lokasiController.text = hasil.lokasi;
       if (_judulController.text.trim().isEmpty) {
@@ -310,44 +306,6 @@ class _BuatLaporanPageState extends State<BuatLaporanPage>
         behavior: SnackBarBehavior.floating,
       ),
     );
-  }
-
-  Future<void> _ambilGps() async {
-    if (_memuatDraf || _drafGagal || _isLoading || _mengambilGps) return;
-    setState(() => _mengambilGps = true);
-
-    try {
-      final hasil = await LokasiService.ambilKoordinatSaatIni();
-      if (!mounted) return;
-      setState(() {
-        _latitude = hasil.latitude;
-        _longitude = hasil.longitude;
-      });
-      _jadwalkanDraf();
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Koordinat GPS berhasil ditandai: ${hasil.teksKoordinat}',
-          ),
-          backgroundColor: AppColors.forestGreen,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            e is StateError ? e.message : 'Gagal mengambil koordinat GPS.',
-          ),
-          backgroundColor: const Color(0xFFB84A4A),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    } finally {
-      if (mounted) setState(() => _mengambilGps = false);
-    }
   }
 
   Future<void> _buangDraf() async {
@@ -385,9 +343,8 @@ class _BuatLaporanPageState extends State<BuatLaporanPage>
         _laporanId = widget.provider.generateId();
         _kategori = KategoriKerusakan.fasilitas;
         _prioritas = PrioritasLaporan.sedang;
+        _asetTerhubung = null;
         _kodeAset = null;
-        _latitude = null;
-        _longitude = null;
         _pesanDraf = 'Draf dihapus. Anda dapat membuat laporan baru.';
       });
     } catch (e) {
@@ -406,6 +363,24 @@ class _BuatLaporanPageState extends State<BuatLaporanPage>
       return;
     }
 
+    if (_foto.isEmpty && _fotoPaths.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: const Color(0xFFB84A4A),
+          margin: const EdgeInsets.all(16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          content: const Text(
+            'Foto lampiran wajib diisi minimal 1 foto.',
+            style: TextStyle(color: Colors.white),
+          ),
+        ),
+      );
+      return;
+    }
+
     _timerDraf?.cancel();
     setState(() => _isLoading = true);
 
@@ -415,8 +390,6 @@ class _BuatLaporanPageState extends State<BuatLaporanPage>
       deskripsi: _deskripsiController.text.trim(),
       lokasi: _lokasiController.text.trim(),
       kodeAset: _kodeAset,
-      latitude: _latitude,
-      longitude: _longitude,
       kategori: _kategori,
       prioritas: _prioritas,
       pelapor: widget.user.nama,
@@ -473,6 +446,7 @@ class _BuatLaporanPageState extends State<BuatLaporanPage>
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final fotoAset = _asetTerhubung?.fotoBytes;
 
     return PopScope(
       canPop: !_isLoading && !_unggahFoto && !_memuatDraf,
@@ -588,7 +562,7 @@ class _BuatLaporanPageState extends State<BuatLaporanPage>
                 ),
                 const SizedBox(height: 16),
 
-                // Lokasi
+                // Lokasi (manual atau otomatis via Scan QR)
                 Wrap(
                   alignment: WrapAlignment.spaceBetween,
                   crossAxisAlignment: WrapCrossAlignment.center,
@@ -596,42 +570,17 @@ class _BuatLaporanPageState extends State<BuatLaporanPage>
                   runSpacing: 4,
                   children: [
                     _buildSectionLabel('Lokasi *'),
-                    Wrap(
-                      spacing: 4,
-                      children: [
-                        TextButton.icon(
-                          style: TextButton.styleFrom(
-                            foregroundColor: AppColors.statusDitugaskan,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 4,
-                            ),
-                          ),
-                          onPressed: _mengambilGps ? null : _ambilGps,
-                          icon: _mengambilGps
-                              ? const SizedBox(
-                                  width: 14,
-                                  height: 14,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Icon(Icons.my_location, size: 16),
-                          label: const Text('Tandai GPS'),
+                    TextButton.icon(
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.forestGreen,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 4,
                         ),
-                        TextButton.icon(
-                          style: TextButton.styleFrom(
-                            foregroundColor: AppColors.forestGreen,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 4,
-                            ),
-                          ),
-                          onPressed: _scanQrAset,
-                          icon: const Icon(Icons.qr_code_scanner, size: 16),
-                          label: const Text('Scan QR'),
-                        ),
-                      ],
+                      ),
+                      onPressed: _scanQrAset,
+                      icon: const Icon(Icons.qr_code_scanner, size: 16),
+                      label: const Text('Scan QR'),
                     ),
                   ],
                 ),
@@ -651,12 +600,25 @@ class _BuatLaporanPageState extends State<BuatLaporanPage>
                     ),
                     child: Row(
                       children: [
-                        const Icon(
-                          Icons.qr_code_2,
-                          size: 22,
-                          color: AppColors.forestGreen,
-                        ),
-                        const SizedBox(width: 8),
+                        if (fotoAset != null) ...[
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.memory(
+                              fotoAset,
+                              width: 52,
+                              height: 52,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                        ] else ...[
+                          const Icon(
+                            Icons.qr_code_2,
+                            size: 22,
+                            color: AppColors.forestGreen,
+                          ),
+                          const SizedBox(width: 8),
+                        ],
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -682,80 +644,15 @@ class _BuatLaporanPageState extends State<BuatLaporanPage>
                         ),
                         IconButton(
                           tooltip: 'Lepas Kode Aset',
-                          icon: const Icon(Icons.close, size: 18, color: Colors.grey),
-                          onPressed: () {
-                            setState(() => _kodeAset = null);
-                            _jadwalkanDraf();
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-                if (_latitude != null && _longitude != null) ...[
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.statusDitugaskanBg,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: AppColors.mutedTeal.withValues(alpha: 0.5),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.pin_drop,
-                          size: 22,
-                          color: AppColors.statusDitugaskan,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Koordinat GPS Tersemat',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.statusDitugaskan,
-                                ),
-                              ),
-                              Text(
-                                '${_latitude!.toStringAsFixed(6)}, ${_longitude!.toStringAsFixed(6)}',
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.textPrimary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        IconButton(
-                          tooltip: 'Buka di Maps',
                           icon: const Icon(
-                            Icons.open_in_new,
+                            Icons.close,
                             size: 18,
-                            color: AppColors.statusDitugaskan,
+                            color: Colors.grey,
                           ),
-                          onPressed: () => LokasiService.bukaGoogleMaps(
-                            _latitude!,
-                            _longitude!,
-                          ),
-                        ),
-                        IconButton(
-                          tooltip: 'Hapus Titik GPS',
-                          icon: const Icon(Icons.close, size: 18, color: Colors.grey),
                           onPressed: () {
                             setState(() {
-                              _latitude = null;
-                              _longitude = null;
+                              _kodeAset = null;
+                              _asetTerhubung = null;
                             });
                             _jadwalkanDraf();
                           },
@@ -797,7 +694,8 @@ class _BuatLaporanPageState extends State<BuatLaporanPage>
                   maxLength: 5000,
                   maxLines: 5,
                   decoration: const InputDecoration(
-                    hintText: 'Jelaskan kerusakan secara detail: kapan terjadi, kondisi saat ini, dampak yang dirasakan...',
+                    hintText:
+                        'Jelaskan kerusakan secara detail: kapan terjadi, kondisi saat ini, dampak yang dirasakan...',
                     alignLabelWithHint: true,
                     filled: true,
                     fillColor: Colors.white,
@@ -814,11 +712,11 @@ class _BuatLaporanPageState extends State<BuatLaporanPage>
                 ),
                 const SizedBox(height: 16),
 
-                // Foto Lampiran
-                _buildSectionLabel('Foto Lampiran (opsional)'),
+                // Foto Lampiran (wajib minimal 1)
+                _buildSectionLabel('Foto Lampiran *'),
                 const SizedBox(height: 2),
                 Text(
-                  'Maksimal $_maxFoto foto. Foto dikompres lalu dikirim bersama laporan dan dapat dilihat admin serta teknisi yang menangani.',
+                  'Wajib minimal 1 foto, maksimal $_maxFoto foto. Foto dikompres lalu dikirim bersama laporan dan dapat dilihat admin serta teknisi yang menangani.',
                   style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
                 ),
                 const SizedBox(height: 8),

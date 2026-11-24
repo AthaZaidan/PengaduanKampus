@@ -1,5 +1,9 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../models/aset_kampus.dart';
@@ -40,6 +44,8 @@ class _KelolaAsetPageState extends State<KelolaAsetPage> {
   }
 
   void _tampilkanModalQr(AsetKampus aset) {
+    final foto = aset.fotoBytes;
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -75,6 +81,18 @@ class _KelolaAsetPageState extends State<KelolaAsetPage> {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 16),
+                if (foto != null) ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
+                    child: Image.memory(
+                      foto,
+                      height: 130,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                ],
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -367,6 +385,8 @@ class _KelolaAsetPageState extends State<KelolaAsetPage> {
                   separatorBuilder: (_, _) => const SizedBox(height: 10),
                   itemBuilder: (context, index) {
                     final aset = daftar[index];
+                    final foto = aset.fotoBytes;
+
                     return Card(
                       elevation: 0,
                       shape: RoundedRectangleBorder(
@@ -430,6 +450,18 @@ class _KelolaAsetPageState extends State<KelolaAsetPage> {
                                 ),
                               ],
                             ),
+                            if (foto != null) ...[
+                              const SizedBox(height: 10),
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(10),
+                                child: Image.memory(
+                                  foto,
+                                  height: 140,
+                                  width: double.infinity,
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                            ],
                             const SizedBox(height: 8),
                             Text(
                               aset.nama,
@@ -532,12 +564,17 @@ class _SheetTambahAset extends StatefulWidget {
 }
 
 class _SheetTambahAsetState extends State<_SheetTambahAset> {
+  static const int _maxFotoBytes = 650 * 1024;
+
   final _formKey = GlobalKey<FormState>();
   final _kodeCtrl = TextEditingController();
   final _namaCtrl = TextEditingController();
   final _lokasiCtrl = TextEditingController();
   final _deskripsiCtrl = TextEditingController();
+  final ImagePicker _picker = ImagePicker();
+
   KategoriKerusakan _kategori = KategoriKerusakan.fasilitas;
+  Uint8List? _fotoBytes;
   bool _menyimpan = false;
 
   @override
@@ -547,6 +584,80 @@ class _SheetTambahAsetState extends State<_SheetTambahAset> {
     _lokasiCtrl.dispose();
     _deskripsiCtrl.dispose();
     super.dispose();
+  }
+
+  void _pilihSumberFoto() {
+    if (_menyimpan) return;
+    showModalBottomSheet<void>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('Ambil dari Kamera'),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _ambilFoto(ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Pilih dari Galeri'),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _ambilFoto(ImageSource.gallery);
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _ambilFoto(ImageSource source) async {
+    try {
+      final picked = await _picker.pickImage(
+        source: source,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 65,
+      );
+      if (picked == null) return;
+
+      final bytes = await picked.readAsBytes();
+      if (bytes.lengthInBytes > _maxFotoBytes) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Ukuran foto terlalu besar untuk disimpan di Firestore. Pilih foto dengan resolusi lebih kecil.',
+            ),
+            backgroundColor: AppColors.statusDitolak,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+
+      if (!mounted) return;
+      setState(() => _fotoBytes = bytes);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Gagal mengambil foto aset. Periksa izin kamera atau galeri.'),
+          backgroundColor: AppColors.statusDitolak,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   Future<void> _simpan() async {
@@ -561,6 +672,7 @@ class _SheetTambahAsetState extends State<_SheetTambahAset> {
       deskripsi: _deskripsiCtrl.text.trim().isEmpty
           ? null
           : _deskripsiCtrl.text.trim(),
+      fotoBase64: _fotoBytes != null ? base64Encode(_fotoBytes!) : null,
     );
 
     try {
@@ -734,6 +846,69 @@ class _SheetTambahAsetState extends State<_SheetTambahAset> {
                   border: OutlineInputBorder(),
                 ),
               ),
+              const SizedBox(height: 12),
+
+              // Foto Aset (opsional)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Foto Aset (opsional)',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
+                  if (_fotoBytes != null)
+                    TextButton.icon(
+                      onPressed: _menyimpan
+                          ? null
+                          : () => setState(() => _fotoBytes = null),
+                      icon: const Icon(
+                        Icons.delete_outline,
+                        size: 18,
+                        color: AppColors.statusDitolak,
+                      ),
+                      label: const Text(
+                        'Hapus Foto',
+                        style: TextStyle(color: AppColors.statusDitolak),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              if (_fotoBytes != null)
+                Stack(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.memory(
+                        _fotoBytes!,
+                        height: 150,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                    Positioned(
+                      right: 8,
+                      bottom: 8,
+                      child: FilledButton.tonalIcon(
+                        onPressed: _menyimpan ? null : _pilihSumberFoto,
+                        icon: const Icon(Icons.edit_outlined, size: 16),
+                        label: const Text('Ganti'),
+                      ),
+                    ),
+                  ],
+                )
+              else
+                OutlinedButton.icon(
+                  onPressed: _menyimpan ? null : _pilihSumberFoto,
+                  icon: const Icon(Icons.add_a_photo_outlined),
+                  label: const Text('Pilih / Ambil Foto Aset'),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(46),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
               const SizedBox(height: 20),
 
               // Tombol Simpan

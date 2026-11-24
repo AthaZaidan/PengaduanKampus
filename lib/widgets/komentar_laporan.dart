@@ -23,10 +23,47 @@ class _KomentarLaporanState extends State<KomentarLaporan> {
   late final _stream = _service.komentar(widget.laporanId);
   bool _sibuk = false;
   String? _galat;
+
   @override
   void dispose() {
     _teks.dispose();
     super.dispose();
+  }
+
+  String _formatRole(String? rawRole, String? uid) {
+    var role = (rawRole ?? '').trim();
+    if (role.isEmpty && uid == widget.user.uid) {
+      role = widget.user.peran.label;
+    }
+    if (role.isEmpty) return '';
+
+    switch (role.toLowerCase()) {
+      case 'admin':
+      case 'admin_fasilitas':
+      case 'admin fasilitas':
+        return 'Admin';
+      case 'teknisi':
+        return 'Teknisi';
+      case 'mahasiswa':
+      case 'student':
+      case 'dosen':
+      case 'staf':
+      case 'staff':
+      case 'pelapor':
+        return 'Pelapor';
+      default:
+        return role;
+    }
+  }
+
+  String _formatNamaDenganRole(Map<String, dynamic> data) {
+    final nama = (data['nama'] as String? ?? 'Pengguna').trim();
+    final roleLabel = _formatRole(
+      data['role'] as String?,
+      data['uid'] as String?,
+    );
+    if (roleLabel.isEmpty) return nama;
+    return '$nama ($roleLabel)';
   }
 
   Future<void> _kirim() async {
@@ -62,7 +99,7 @@ class _KomentarLaporanState extends State<KomentarLaporan> {
             style: TextStyle(fontSize: 12),
           ),
           const SizedBox(height: 12),
-          StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+          StreamBuilder<QuerySnapshot>(
             stream: _stream,
             builder: (context, snap) {
               if (snap.hasError) {
@@ -80,35 +117,46 @@ class _KomentarLaporanState extends State<KomentarLaporan> {
               return Column(
                 children: [
                   for (final doc in snap.data!.docs)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).scaffoldBackgroundColor,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              doc.data()['nama'] as String,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                              ),
+                    Builder(
+                      builder: (context) {
+                        final raw = doc.data();
+                        final data = raw is Map<String, dynamic>
+                            ? raw
+                            : const <String, dynamic>{};
+                        final namaTampil = _formatNamaDenganRole(data);
+                        final teks = (data['teks'] as String? ?? '').trim();
+
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).scaffoldBackgroundColor,
+                              borderRadius: BorderRadius.circular(8),
                             ),
-                            const SizedBox(height: 4),
-                            Text(doc.data()['teks'] as String),
-                            if (doc.metadata.hasPendingWrites)
-                              const Text(
-                                'Menunggu konfirmasi server',
-                                style: TextStyle(fontSize: 10),
-                              ),
-                          ],
-                        ),
-                      ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  namaTampil,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(teks),
+                                if (doc.metadata.hasPendingWrites)
+                                  const Text(
+                                    'Menunggu konfirmasi server',
+                                    style: TextStyle(fontSize: 10),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
                     ),
                 ],
               );
